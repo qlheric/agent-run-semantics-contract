@@ -36,7 +36,7 @@ This proposal is one minimal-but-complete answer: a JSON Schema + 14 valid/inval
 
 ## 3. Cross-language conformance
 
-The Python reference validator (`tools/contract_check.py`, stdlib only) and an independent Java implementation validate the **same fixture set**:
+The Python reference validator (`tools/contract_check.py`, dependency: `jsonschema`) and an independent Java implementation validate the **same fixture set**:
 
 - all `valid/` pass, all `invalid/` rejected, **rejection paths and exit codes agree**;
 - canonical JSON and `sha256` are **byte-identical** across 14 fixtures;

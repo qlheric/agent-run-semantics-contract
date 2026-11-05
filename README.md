@@ -19,9 +19,10 @@ tools/
   contract_check.py           # Python reference validator (stdlib only)
 ```
 
-## Try it (no dependencies)
+## Try it
 
 ```bash
+python -m pip install "jsonschema>=4.20"   # only dependency of the validator
 python tools/contract_check.py --all
 # rejected contract/fixtures/invalid/negative_budget.json path=/run/budget/max_cost_usd
 # ...
