@@ -1,0 +1,80 @@
+{
+  "$comment": "负样本⑤：负数预算 max_cost_usd=-1（拒绝路径 /run/budget/max_cost_usd，minimum 约束）",
+  "spec": {
+    "version": "0.1.0",
+    "clock": "wall",
+    "framework": "langgraph"
+  },
+  "run": {
+    "run_id": "run_invalid_negative_005",
+    "status": "running",
+    "clock": "wall",
+    "idempotency_key": "idem-invalid-negative-005",
+    "policy": {
+      "capability_tier": "read",
+      "max_attempts": 1,
+      "retry_profile": {
+        "name": "model_only",
+        "max_attempts": 1,
+        "backoff_ms": 0,
+        "retryable_tools": []
+      }
+    },
+    "budget": {
+      "max_steps": 10,
+      "max_tool_calls": 20,
+      "max_tokens": 30000,
+      "max_cost_usd": -1,
+      "currency": "USD",
+      "price_snapshot_id": "price-2026-11-01"
+    },
+    "termination": {
+      "reason": "completed"
+    },
+    "error": {
+      "code": "none"
+    },
+    "audit": [],
+    "tools": []
+  },
+  "step": {
+    "step_id": "step_0",
+    "attempt": 1,
+    "side_effect": "none",
+    "idempotency_key": "idem-invalid-negative-005",
+    "idempotency_scope": "run_invalid_negative_005/step_0/search",
+    "approval": {
+      "required": false,
+      "status": "approved"
+    },
+    "args": {
+      "query": "x"
+    },
+    "granted": {
+      "deadline_at_ms": 1793594400000,
+      "deadline_ms": 5000,
+      "clock": "wall"
+    },
+    "grant_request": {
+      "run_id": "run_invalid_negative_005",
+      "step_id": "step_0",
+      "attempt": 1,
+      "idempotency_scope": "run_invalid_negative_005/step_0/search",
+      "tool": "search",
+      "args": {
+        "query": "x"
+      }
+    }
+  },
+  "x-status-transitions": {
+    "created": ["running"],
+    "running": ["succeeded", "failed"],
+    "waiting_approval": ["running"],
+    "paused": ["running"],
+    "degraded": ["running"],
+    "succeeded": [],
+    "failed": [],
+    "cancelled": [],
+    "outcome_unknown": ["running"]
+  }
+}

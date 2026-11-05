@@ -1,0 +1,87 @@
+{
+  "$comment": "边界样例：大参数走 args_ref（无 step.args），digest 只对引用字符串做",
+  "spec": {
+    "version": "0.1.0",
+    "clock": "monotonic",
+    "framework": "custom"
+  },
+  "run": {
+    "run_id": "run_args_ref_002",
+    "status": "paused",
+    "clock": "monotonic",
+    "idempotency_key": "idem-run-args-ref-002",
+    "policy": {
+      "capability_tier": "read",
+      "max_attempts": 1,
+      "retry_profile": {
+        "name": "model_only",
+        "max_attempts": 1,
+        "backoff_ms": 0,
+        "retryable_tools": []
+      }
+    },
+    "budget": {
+      "max_steps": 5,
+      "max_tool_calls": 10,
+      "max_tokens": 20000,
+      "max_cost_usd": 1000000,
+      "currency": "USD",
+      "price_snapshot_id": "price-2026-11-01"
+    },
+    "termination": {
+      "reason": "completed"
+    },
+    "error": {
+      "code": "none"
+    },
+    "audit": [],
+    "tools": [
+      {
+        "tool": "read_file",
+        "tier": "read",
+        "args_schema": {
+          "type": "object"
+        },
+        "side_effect": "none",
+        "idempotency_key_template": "run/{run_id}/step/{step_id}/read_file",
+        "result_budget_bytes": 1024
+      }
+    ]
+  },
+  "step": {
+    "step_id": "step_0",
+    "attempt": 1,
+    "side_effect": "none",
+    "idempotency_key": "idem-step-args-ref-002",
+    "idempotency_scope": null,
+    "approval": {
+      "required": false,
+      "status": "pending"
+    },
+    "args_ref": "objstore://m1/run_args_ref_002/step_0/args.json",
+    "granted": {
+      "deadline_at_ms": 1793594400000,
+      "deadline_ms": 15000,
+      "clock": "monotonic"
+    },
+    "grant_request": {
+      "run_id": "run_args_ref_002",
+      "step_id": "step_0",
+      "attempt": 1,
+      "idempotency_scope": null,
+      "tool": "read_file",
+      "args_ref": "objstore://m1/run_args_ref_002/step_0/args.json"
+    }
+  },
+  "x-status-transitions": {
+    "created": ["running"],
+    "running": ["paused", "succeeded", "failed"],
+    "waiting_approval": ["running"],
+    "paused": ["running"],
+    "degraded": ["running"],
+    "succeeded": [],
+    "failed": [],
+    "cancelled": [],
+    "outcome_unknown": ["running"]
+  }
+}

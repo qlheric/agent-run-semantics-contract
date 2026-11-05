@@ -1,0 +1,24 @@
+name: contract-conformance
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Schema + fixtures (valid 9/9, invalid 5/5)
+        run: python tools/contract_check.py --all
+      - name: Coverage / fields (one-line JSON)
+        run: |
+          python tools/contract_check.py --coverage
+          python tools/contract_check.py --fields
+      - name: Canonical digest smoke (byte-exact)
+        run: python tools/contract_check.py --digest contract/fixtures/valid/step_full.json

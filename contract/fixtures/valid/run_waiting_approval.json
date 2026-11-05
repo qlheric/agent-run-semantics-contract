@@ -1,0 +1,92 @@
+{
+  "$comment": "waiting_approval 状态样例：等待人工审批，approval.status=pending 且 required=true",
+  "spec": {
+    "version": "0.1.0",
+    "clock": "wall",
+    "framework": "langgraph"
+  },
+  "run": {
+    "run_id": "run_waiting_004",
+    "status": "waiting_approval",
+    "clock": "wall",
+    "idempotency_key": "idem-run-waiting-004",
+    "policy": {
+      "capability_tier": "read",
+      "max_attempts": 3,
+      "retry_profile": {
+        "name": "model_only",
+        "max_attempts": 3,
+        "backoff_ms": 200,
+        "retryable_tools": []
+      }
+    },
+    "budget": {
+      "max_steps": 12,
+      "max_tool_calls": 24,
+      "max_tokens": 60000,
+      "max_cost_usd": 3000000,
+      "currency": "USD",
+      "price_snapshot_id": "price-2026-11-01"
+    },
+    "termination": {
+      "reason": "completed"
+    },
+    "error": {
+      "code": "none"
+    },
+    "audit": [],
+    "tools": [
+      {
+        "tool": "search",
+        "tier": "read",
+        "args_schema": {
+          "type": "object"
+        },
+        "side_effect": "none",
+        "idempotency_key_template": "run/{run_id}/step/{step_id}/search",
+        "result_budget_bytes": 8192
+      }
+    ]
+  },
+  "step": {
+    "step_id": "step_1",
+    "attempt": 1,
+    "side_effect": "none",
+    "idempotency_key": "idem-step-waiting-004",
+    "idempotency_scope": "run_waiting_004/step_1/search",
+    "approval": {
+      "required": true,
+      "status": "pending",
+      "expires_at": "2026-11-02T10:30:00Z"
+    },
+    "args": {
+      "query": "待审批的检索"
+    },
+    "granted": {
+      "deadline_at_ms": 1793594400000,
+      "deadline_ms": 10000,
+      "clock": "wall"
+    },
+    "grant_request": {
+      "run_id": "run_waiting_004",
+      "step_id": "step_1",
+      "attempt": 1,
+      "idempotency_scope": "run_waiting_004/step_1/search",
+      "tool": "search",
+      "args": {
+        "query": "待审批的检索"
+      }
+    }
+  },
+  "x-status-transitions": {
+    "created": ["running"],
+    "running": ["waiting_approval", "succeeded", "failed"],
+    "waiting_approval": ["running", "cancelled", "failed"],
+    "paused": ["running"],
+    "degraded": ["running"],
+    "succeeded": [],
+    "failed": [],
+    "cancelled": [],
+    "outcome_unknown": ["running"]
+  }
+}

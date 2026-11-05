@@ -1,0 +1,112 @@
+{
+  "$comment": "degraded 状态样例：预算降级后继续跑，step.side_effect=non_idempotent（不自动重试）",
+  "spec": {
+    "version": "0.1.0",
+    "clock": "monotonic",
+    "framework": "custom"
+  },
+  "run": {
+    "run_id": "run_degraded_005",
+    "status": "degraded",
+    "clock": "monotonic",
+    "idempotency_key": "idem-run-degraded-005",
+    "policy": {
+      "capability_tier": "destructive",
+      "max_attempts": 1,
+      "retry_profile": {
+        "name": "read_only",
+        "max_attempts": 1,
+        "backoff_ms": 0,
+        "retryable_tools": ["read_file"]
+      }
+    },
+    "budget": {
+      "max_steps": 4,
+      "max_tool_calls": 8,
+      "max_tokens": 12000,
+      "max_cost_usd": 400000,
+      "currency": "USD",
+      "price_snapshot_id": "price-2026-11-01",
+      "used_steps": 4,
+      "used_tool_calls": 8,
+      "used_tokens": 12000,
+      "used_cost_usd": 400000
+    },
+    "termination": {
+      "reason": "degraded_circuit_break",
+      "detail": "token 配额打满，降级后继续"
+    },
+    "error": {
+      "code": "none"
+    },
+    "audit": [],
+    "tools": [
+      {
+        "tool": "read_file",
+        "tier": "read",
+        "args_schema": {
+          "type": "object"
+        },
+        "side_effect": "none",
+        "idempotency_key_template": "run/{run_id}/step/{step_id}/read_file",
+        "result_budget_bytes": 4096
+      },
+      {
+        "tool": "charge_card",
+        "tier": "destructive",
+        "args_schema": {
+          "type": "object",
+          "required": ["order_id"]
+        },
+        "side_effect": "non_idempotent",
+        "idempotency_key_template": "run/{run_id}/step/{step_id}/charge_card",
+        "result_budget_bytes": 1024
+      }
+    ]
+  },
+  "step": {
+    "step_id": "step_0",
+    "attempt": 1,
+    "side_effect": "non_idempotent",
+    "idempotency_key": "idem-step-degraded-005",
+    "idempotency_scope": "run_degraded_005/step_0/charge_card",
+    "approval": {
+      "required": true,
+      "status": "approved",
+      "by": "operator-b",
+      "at": "2026-11-02T10:10:00Z"
+    },
+    "args": {
+      "order_id": "ORD-2026-0001",
+      "amount_usd": 1999
+    },
+    "granted": {
+      "deadline_at_ms": 1793594400000,
+      "deadline_ms": 5000,
+      "clock": "monotonic",
+      "scope": "run_degraded_005/step_0/charge_card"
+    },
+    "grant_request": {
+      "run_id": "run_degraded_005",
+      "step_id": "step_0",
+      "attempt": 1,
+      "idempotency_scope": "run_degraded_005/step_0/charge_card",
+      "tool": "charge_card",
+      "args": {
+        "order_id": "ORD-2026-0001",
+        "amount_usd": 1999
+      }
+    }
+  },
+  "x-status-transitions": {
+    "created": ["running"],
+    "running": ["degraded", "succeeded", "failed"],
+    "waiting_approval": ["running"],
+    "paused": ["running"],
+    "degraded": ["running", "succeeded", "failed"],
+    "succeeded": [],
+    "failed": [],
+    "cancelled": [],
+    "outcome_unknown": ["running"]
+  }
+}

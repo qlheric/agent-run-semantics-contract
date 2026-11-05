@@ -1,0 +1,473 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentrun.invalid/contract/run_semantics/0.1.0/run_semantics.schema.json",
+  "title": "Agent Run 语义契约 v0.1",
+  "description": "M1 Agent Run 控制面语义契约 v0.1.0（单一真源）。本文只定形状，不定实现。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["spec", "run", "step", "x-status-transitions"],
+  "properties": {
+    "$comment": {
+      "type": "string",
+      "description": "fixture 用途说明（可选注解，不参与语义）"
+    },
+    "spec": { "$ref": "#/$defs/spec" },
+    "run": { "$ref": "#/$defs/run" },
+    "step": { "$ref": "#/$defs/step" },
+    "x-status-transitions": {
+      "$ref": "#/$defs/status_transitions",
+      "description": "契约级状态转移表（文档根元数据，不随每份 run 快照重复下发）"
+    }
+  },
+  "$defs": {
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "clock", "framework"],
+      "properties": {
+        "version": {
+          "const": "0.1.0",
+          "description": "契约版本；版本变了还是同一契约（ID 永不重命名）"
+        },
+        "clock": {
+          "$ref": "#/$defs/clock",
+          "description": "契约级时钟约定：时间注入点（字段 17）"
+        },
+        "framework": {
+          "type": "string",
+          "enum": ["langgraph", "agent_framework", "custom"],
+          "description": "执行面框架标识（只做形状，不做优劣评价）"
+        }
+      }
+    },
+    "clock": {
+      "type": "string",
+      "enum": ["wall", "monotonic"],
+      "description": "wall=绝对墙钟；monotonic=本地单调钟（只计时不宣布超时）"
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "status",
+        "clock",
+        "idempotency_key",
+        "policy",
+        "budget",
+        "termination",
+        "error",
+        "audit",
+        "tools"
+      ],
+      "properties": {
+        "run_id": { "type": "string", "minLength": 1 },
+        "status": {
+          "type": "string",
+          "enum": [
+            "created",
+            "running",
+            "waiting_approval",
+            "paused",
+            "degraded",
+            "succeeded",
+            "failed",
+            "cancelled",
+            "outcome_unknown"
+          ],
+          "description": "run 状态（字段 2）；outcome_unknown = 副作用可能已发生"
+        },
+        "clock": {
+          "$ref": "#/$defs/clock",
+          "description": "run 级时钟约定（字段 17）"
+        },
+        "idempotency_key": {
+          "type": "string",
+          "minLength": 1,
+          "description": "run 级幂等键（字段 5/语义 1）：同键重放 ⇒ 同一 run"
+        },
+        "policy": { "$ref": "#/$defs/policy" },
+        "budget": { "$ref": "#/$defs/budget" },
+        "termination": { "$ref": "#/$defs/termination" },
+        "error": { "$ref": "#/$defs/error" },
+        "audit": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/audit_entry" },
+          "description": "审计链条目（字段 9）：append-only 哈希链"
+        },
+        "tools": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/tool_entry" },
+          "description": "按档过滤后下发的工具目录（字段 10）"
+        }
+      }
+    },
+    "status_transitions": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "合法状态转移表；契约级元数据（挂在文档根），key 与 value 都必须落在 run.status 枚举内",
+      "required": [
+        "created",
+        "running",
+        "waiting_approval",
+        "paused",
+        "degraded",
+        "succeeded",
+        "failed",
+        "cancelled",
+        "outcome_unknown"
+      ],
+      "properties": {
+        "created": { "$ref": "#/$defs/status_targets" },
+        "running": { "$ref": "#/$defs/status_targets" },
+        "waiting_approval": { "$ref": "#/$defs/status_targets" },
+        "paused": { "$ref": "#/$defs/status_targets" },
+        "degraded": { "$ref": "#/$defs/status_targets" },
+        "succeeded": { "$ref": "#/$defs/status_targets" },
+        "failed": { "$ref": "#/$defs/status_targets" },
+        "cancelled": { "$ref": "#/$defs/status_targets" },
+        "outcome_unknown": { "$ref": "#/$defs/status_targets" }
+      }
+    },
+    "status_targets": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "created",
+          "running",
+          "waiting_approval",
+          "paused",
+          "degraded",
+          "succeeded",
+          "failed",
+          "cancelled",
+          "outcome_unknown"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability_tier", "max_attempts", "retry_profile"],
+      "properties": {
+        "capability_tier": {
+          "type": "string",
+          "enum": ["read", "write", "destructive"],
+          "description": "权限档（语义 5），能力上限；工具级 `tools[].tier` 仍独立"
+        },
+        "max_attempts": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "重试次数上限（字段 3）"
+        },
+        "retry_profile": { "$ref": "#/$defs/retry_profile" }
+      }
+    },
+    "retry_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "max_attempts", "backoff_ms", "retryable_tools"],
+      "description": "分级重试的可执行细化（字段 15）：档位名之外还要写清可重试工具/上限/退避",
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": ["model_only", "read_only", "full"],
+          "description": "重试档位"
+        },
+        "max_attempts": { "type": "integer", "minimum": 1 },
+        "backoff_ms": { "type": "integer", "minimum": 0 },
+        "retryable_tools": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_steps",
+        "max_tool_calls",
+        "max_tokens",
+        "max_cost_usd",
+        "currency",
+        "price_snapshot_id"
+      ],
+      "description": "四项配额（字段 6/16）+ 已用量；金额一律整数 micro-USD，禁浮点",
+      "properties": {
+        "max_steps": { "type": "integer", "minimum": 0 },
+        "max_tool_calls": { "type": "integer", "minimum": 0 },
+        "max_tokens": { "type": "integer", "minimum": 0 },
+        "max_cost_usd": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "成本配额，单位 micro-USD（1 USD = 1_000_000）"
+        },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "price_snapshot_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "价格快照 ID（字段 16）：成本口径必须指到一份快照"
+        },
+        "used_steps": { "type": "integer", "minimum": 0 },
+        "used_tool_calls": { "type": "integer", "minimum": 0 },
+        "used_tokens": { "type": "integer", "minimum": 0 },
+        "used_cost_usd": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "termination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason"],
+      "properties": {
+        "reason": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "tool_error",
+            "budget_exhausted",
+            "deadline_exceeded",
+            "approval_denied",
+            "cancelled_by_caller",
+            "degraded_circuit_break"
+          ]
+        },
+        "detail": { "type": "string" }
+      }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "none",
+            "tool_failed",
+            "budget_exhausted",
+            "deadline_exceeded",
+            "approval_denied",
+            "policy_violation",
+            "internal_error"
+          ]
+        },
+        "message": { "type": "string" }
+      }
+    },
+    "audit_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "seq",
+        "ts",
+        "type",
+        "run_id",
+        "step_id",
+        "attempt",
+        "payload",
+        "prev_hash",
+        "hash"
+      ],
+      "properties": {
+        "seq": { "type": "integer", "minimum": 0 },
+        "ts": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "minLength": 1 },
+        "run_id": { "type": "string", "minLength": 1 },
+        "step_id": { "type": "string", "minLength": 1 },
+        "attempt": { "type": "integer", "minimum": 1 },
+        "payload": { "$ref": "#/$defs/audit_payload" },
+        "prev_hash": { "type": "string" },
+        "hash": { "type": "string", "minLength": 1 }
+      }
+    },
+    "audit_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "审计载荷：结构化固定字段，未知信息走 run/step 的其他字段",
+      "properties": {
+        "tool": { "type": "string" },
+        "args_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "result": { "type": "string" },
+        "reason": { "type": "string" },
+        "amount_usd": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "tool_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tool",
+        "tier",
+        "args_schema",
+        "side_effect",
+        "idempotency_key_template",
+        "result_budget_bytes"
+      ],
+      "description": "工具目录条目（字段 10）：按权限档过滤后才下发",
+      "properties": {
+        "tool": { "type": "string", "minLength": 1 },
+        "tier": {
+          "type": "string",
+          "enum": ["read", "write", "destructive"],
+          "description": "权限档（语义 5）"
+        },
+        "args_schema": { "$ref": "#/$defs/args_schema" },
+        "side_effect": { "$ref": "#/$defs/side_effect" },
+        "idempotency_key_template": { "type": "string" },
+        "result_budget_bytes": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "args_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "description": "参数形状的粗粒度描述（不做完整 JSON Schema 求值）",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["object", "array", "string", "integer", "number", "boolean"]
+        },
+        "required": { "type": "array", "items": { "type": "string" } },
+        "enum": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "side_effect": {
+      "type": "string",
+      "enum": ["none", "idempotent", "non_idempotent"],
+      "description": "声明式副作用（字段 13）：控制面据此决定是否允许重试"
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "status"],
+      "description": "审批状态（字段 11）",
+      "properties": {
+        "required": { "type": "boolean" },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "approved", "rejected", "expired"]
+        },
+        "by": { "type": "string" },
+        "at": { "type": "string" },
+        "expires_at": { "type": "string" }
+      }
+    },
+    "granted": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["deadline_at_ms", "deadline_ms", "clock"],
+      "description": "控制面签发的授权（字段 4/7）：执行面只有额度，不是所有权",
+      "properties": {
+        "deadline_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "绝对墙钟截止（epoch 毫秒）"
+        },
+        "deadline_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "本 step 时长上限（毫秒）"
+        },
+        "clock": { "$ref": "#/$defs/clock" },
+        "scope": { "type": "string" },
+        "quota": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cost_usd", "tool_calls", "tokens"],
+          "properties": {
+            "cost_usd": { "type": "integer", "minimum": 0 },
+            "tool_calls": { "type": "integer", "minimum": 0 },
+            "tokens": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "grant_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run_id", "step_id", "attempt", "idempotency_scope", "tool"],
+      "description": "request_grant 入参契约（字段 18）：调用工具之前提交，控制面算 args_digest 并随 grant 回传",
+      "properties": {
+        "run_id": { "type": "string", "minLength": 1 },
+        "step_id": { "type": "string", "minLength": 1 },
+        "attempt": { "type": "integer", "minimum": 1 },
+        "idempotency_scope": {
+          "type": ["string", "null"],
+          "description": "允许 null：scope 未分配时按 run_id/step_id/tool 派生"
+        },
+        "tool": { "type": "string", "minLength": 1 },
+        "args": { "$ref": "#/$defs/json_value" },
+        "args_ref": { "type": "string" }
+      }
+    },
+    "json_value": {
+      "description": "args 只允许 string/integer/boolean/null/array/object，禁浮点（算法见 README §args_digest）",
+      "anyOf": [
+        { "type": "string" },
+        { "type": "integer" },
+        { "type": "boolean" },
+        { "type": "null" },
+        { "type": "array", "items": { "$ref": "#/$defs/json_value" } },
+        {
+          "type": "object",
+          "x-free-form": true,
+          "additionalProperties": { "$ref": "#/$defs/json_value" }
+        }
+      ]
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "step_id",
+        "attempt",
+        "side_effect",
+        "idempotency_key",
+        "approval",
+        "granted",
+        "grant_request"
+      ],
+      "properties": {
+        "step_id": { "type": "string", "minLength": 1 },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "第几次尝试（字段 3）"
+        },
+        "side_effect": { "$ref": "#/$defs/side_effect" },
+        "idempotency_key": {
+          "type": "string",
+          "minLength": 1,
+          "description": "业务侧幂等键（字段 14）；与控制面内部去重的 idempotency_scope 是两个东西"
+        },
+        "idempotency_scope": {
+          "type": ["string", "null"],
+          "description": "控制面分配的幂等范围（字段 5）；允许 null"
+        },
+        "approval": { "$ref": "#/$defs/approval" },
+        "args": { "$ref": "#/$defs/json_value" },
+        "args_ref": {
+          "type": "string",
+          "minLength": 1,
+          "description": "大参数引用（字段 12）；与 args 二选一"
+        },
+        "granted": { "$ref": "#/$defs/granted" },
+        "grant_request": { "$ref": "#/$defs/grant_request" }
+      },
+      "oneOf": [
+        {
+          "required": ["args"],
+          "not": { "required": ["args_ref"] }
+        },
+        {
+          "required": ["args_ref"],
+          "not": { "required": ["args"] }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "$comment": "M1 Agent Run 契约 · 权威状态转移表（canonical status transitions）",
+  "version": "v0.1",
+  "doc": "run.status 的 9 个状态与合法转移边。本文件是**唯一权威**：M1 控制面与任何消费方一律以它为准。`run_semantics.schema.json` 只定形状（$defs/status_targets），fixtures 根级的 x-status-transitions 仅为场景样例、互不相同，不得当权威读取。",
+  "states": [
+    "created",
+    "running",
+    "waiting_approval",
+    "paused",
+    "degraded",
+    "succeeded",
+    "failed",
+    "cancelled",
+    "outcome_unknown"
+  ],
+  "transitions": {
+    "created": ["running", "cancelled"],
+    "running": ["waiting_approval", "paused", "degraded", "succeeded", "failed", "cancelled", "outcome_unknown"],
+    "waiting_approval": ["running", "cancelled", "failed"],
+    "paused": ["running", "cancelled"],
+    "degraded": ["running", "succeeded", "failed", "cancelled"],
+    "succeeded": [],
+    "failed": [],
+    "cancelled": [],
+    "outcome_unknown": ["running", "failed"]
+  },
+  "notes": [
+    "空数组 = 终态，无出口。",
+    "waiting_approval 既是初始态（policy 要求先批再跑）也可由 running 进入（执行中需要人批）。",
+    "created → running 是正常启动；created → cancelled 是启动前撤销。",
+    "语义前置条件（如 deny 只允许 waiting_approval）不写进本表，留在服务层判定。"
+  ]
+}

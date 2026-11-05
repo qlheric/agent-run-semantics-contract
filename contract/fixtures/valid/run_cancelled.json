@@ -1,0 +1,95 @@
+{
+  "$comment": "cancelled 状态样例：调用方取消，termination.reason=cancelled_by_caller",
+  "spec": {
+    "version": "0.1.0",
+    "clock": "monotonic",
+    "framework": "custom"
+  },
+  "run": {
+    "run_id": "run_cancelled_008",
+    "status": "cancelled",
+    "clock": "monotonic",
+    "idempotency_key": "idem-run-cancelled-008",
+    "policy": {
+      "capability_tier": "read",
+      "max_attempts": 2,
+      "retry_profile": {
+        "name": "model_only",
+        "max_attempts": 2,
+        "backoff_ms": 0,
+        "retryable_tools": []
+      }
+    },
+    "budget": {
+      "max_steps": 6,
+      "max_tool_calls": 12,
+      "max_tokens": 20000,
+      "max_cost_usd": 800000,
+      "currency": "USD",
+      "price_snapshot_id": "price-2026-11-01"
+    },
+    "termination": {
+      "reason": "cancelled_by_caller",
+      "detail": "用户主动取消"
+    },
+    "error": {
+      "code": "none"
+    },
+    "audit": [],
+    "tools": [
+      {
+        "tool": "search",
+        "tier": "read",
+        "args_schema": {
+          "type": "object"
+        },
+        "side_effect": "none",
+        "idempotency_key_template": "run/{run_id}/step/{step_id}/search",
+        "result_budget_bytes": 8192
+      }
+    ]
+  },
+  "step": {
+    "step_id": "step_0",
+    "attempt": 1,
+    "side_effect": "none",
+    "idempotency_key": "idem-step-cancelled-008",
+    "idempotency_scope": "run_cancelled_008/step_0/search",
+    "approval": {
+      "required": false,
+      "status": "expired",
+      "by": "system",
+      "at": "2026-11-02T09:00:00Z",
+      "expires_at": "2026-11-02T09:30:00Z"
+    },
+    "args": {
+      "query": "取消前的检索"
+    },
+    "granted": {
+      "deadline_at_ms": 1793594400000,
+      "deadline_ms": 10000,
+      "clock": "monotonic"
+    },
+    "grant_request": {
+      "run_id": "run_cancelled_008",
+      "step_id": "step_0",
+      "attempt": 1,
+      "idempotency_scope": "run_cancelled_008/step_0/search",
+      "tool": "search",
+      "args": {
+        "query": "取消前的检索"
+      }
+    }
+  },
+  "x-status-transitions": {
+    "created": ["running", "cancelled"],
+    "running": ["cancelled", "failed"],
+    "waiting_approval": ["cancelled"],
+    "paused": ["cancelled"],
+    "degraded": ["cancelled"],
+    "succeeded": [],
+    "failed": [],
+    "cancelled": [],
+    "outcome_unknown": ["running"]
+  }
+}

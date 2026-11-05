@@ -1,0 +1,114 @@
+{
+  "$comment": "created 状态样例：framework=agent_framework、policy.capability_tier=write、retry_profile=read_only、step.side_effect=idempotent、approval=rejected",
+  "spec": {
+    "version": "0.1.0",
+    "clock": "wall",
+    "framework": "agent_framework"
+  },
+  "run": {
+    "run_id": "run_created_003",
+    "status": "created",
+    "clock": "wall",
+    "idempotency_key": "idem-run-created-003",
+    "policy": {
+      "capability_tier": "write",
+      "max_attempts": 2,
+      "retry_profile": {
+        "name": "read_only",
+        "max_attempts": 2,
+        "backoff_ms": 100,
+        "retryable_tools": ["search", "read_file", "list_dir"]
+      }
+    },
+    "budget": {
+      "max_steps": 8,
+      "max_tool_calls": 16,
+      "max_tokens": 40000,
+      "max_cost_usd": 2000000,
+      "currency": "USD",
+      "price_snapshot_id": "price-2026-11-01"
+    },
+    "termination": {
+      "reason": "completed"
+    },
+    "error": {
+      "code": "none"
+    },
+    "audit": [],
+    "tools": [
+      {
+        "tool": "list_dir",
+        "tier": "read",
+        "args_schema": {
+          "type": "object",
+          "required": ["path"]
+        },
+        "side_effect": "none",
+        "idempotency_key_template": "run/{run_id}/step/{step_id}/list_dir",
+        "result_budget_bytes": 4096
+      },
+      {
+        "tool": "write_file",
+        "tier": "write",
+        "args_schema": {
+          "type": "object",
+          "required": ["path", "content"]
+        },
+        "side_effect": "idempotent",
+        "idempotency_key_template": "run/{run_id}/step/{step_id}/write_file",
+        "result_budget_bytes": 65536
+      }
+    ]
+  },
+  "step": {
+    "step_id": "step_0",
+    "attempt": 1,
+    "side_effect": "idempotent",
+    "idempotency_key": "idem-step-created-003",
+    "idempotency_scope": "run_created_003/step_0/write_file",
+    "approval": {
+      "required": true,
+      "status": "rejected",
+      "by": "operator-a",
+      "at": "2026-11-02T10:05:00Z",
+      "expires_at": "2026-11-02T10:35:00Z"
+    },
+    "args": {
+      "path": "reports/summary.md",
+      "content": "写入内容"
+    },
+    "granted": {
+      "deadline_at_ms": 1793594400000,
+      "deadline_ms": 20000,
+      "clock": "wall",
+      "scope": "run_created_003/step_0/write_file",
+      "quota": {
+        "cost_usd": 50000,
+        "tool_calls": 2,
+        "tokens": 10000
+      }
+    },
+    "grant_request": {
+      "run_id": "run_created_003",
+      "step_id": "step_0",
+      "attempt": 1,
+      "idempotency_scope": "run_created_003/step_0/write_file",
+      "tool": "write_file",
+      "args": {
+        "path": "reports/summary.md",
+        "content": "写入内容"
+      }
+    }
+  },
+  "x-status-transitions": {
+    "created": ["running", "cancelled"],
+    "running": ["succeeded", "failed"],
+    "waiting_approval": ["running"],
+    "paused": ["running"],
+    "degraded": ["running"],
+    "succeeded": [],
+    "failed": [],
+    "cancelled": [],
+    "outcome_unknown": ["running"]
+  }
+}

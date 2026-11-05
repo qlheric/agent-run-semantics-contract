@@ -1,0 +1,100 @@
+{
+  "$comment": "succeeded 状态样例：正常收束，termination.reason=completed，error.code=none",
+  "spec": {
+    "version": "0.1.0",
+    "clock": "wall",
+    "framework": "langgraph"
+  },
+  "run": {
+    "run_id": "run_succeeded_006",
+    "status": "succeeded",
+    "clock": "wall",
+    "idempotency_key": "idem-run-succeeded-006",
+    "policy": {
+      "capability_tier": "read",
+      "max_attempts": 3,
+      "retry_profile": {
+        "name": "full",
+        "max_attempts": 3,
+        "backoff_ms": 1000,
+        "retryable_tools": ["search", "read_file", "write_file"]
+      }
+    },
+    "budget": {
+      "max_steps": 10,
+      "max_tool_calls": 30,
+      "max_tokens": 50000,
+      "max_cost_usd": 2500000,
+      "currency": "USD",
+      "price_snapshot_id": "price-2026-11-01",
+      "used_steps": 7,
+      "used_tool_calls": 22,
+      "used_tokens": 43000,
+      "used_cost_usd": 1250000
+    },
+    "termination": {
+      "reason": "completed",
+      "detail": "全部 step 完成"
+    },
+    "error": {
+      "code": "none"
+    },
+    "audit": [],
+    "tools": [
+      {
+        "tool": "search",
+        "tier": "read",
+        "args_schema": {
+          "type": "object"
+        },
+        "side_effect": "none",
+        "idempotency_key_template": "run/{run_id}/step/{step_id}/search",
+        "result_budget_bytes": 8192
+      }
+    ]
+  },
+  "step": {
+    "step_id": "step_2",
+    "attempt": 1,
+    "side_effect": "none",
+    "idempotency_key": "idem-step-succeeded-006",
+    "idempotency_scope": "run_succeeded_006/step_2/search",
+    "approval": {
+      "required": false,
+      "status": "approved",
+      "by": "system"
+    },
+    "args": {
+      "query": "最终核对",
+      "top_k": 3
+    },
+    "granted": {
+      "deadline_at_ms": 1793594400000,
+      "deadline_ms": 8000,
+      "clock": "wall",
+      "scope": "run_succeeded_006/step_2/search"
+    },
+    "grant_request": {
+      "run_id": "run_succeeded_006",
+      "step_id": "step_2",
+      "attempt": 1,
+      "idempotency_scope": "run_succeeded_006/step_2/search",
+      "tool": "search",
+      "args": {
+        "query": "最终核对",
+        "top_k": 3
+      }
+    }
+  },
+  "x-status-transitions": {
+    "created": ["running"],
+    "running": ["succeeded", "failed", "cancelled"],
+    "waiting_approval": ["running"],
+    "paused": ["running"],
+    "degraded": ["running", "succeeded"],
+    "succeeded": [],
+    "failed": [],
+    "cancelled": [],
+    "outcome_unknown": ["running"]
+  }
+}

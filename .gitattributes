@@ -1,0 +1,9 @@
+# 契约文件按字节存（跨语言 conformance 依赖逐字节一致）
+contract/** -text
+# 其余文本统一 LF
+*.md text eol=lf
+*.py text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+# fixtures 也是契约资产，禁止换行归一化
+contract/fixtures/** -text
