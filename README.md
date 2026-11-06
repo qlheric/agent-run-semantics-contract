@@ -1,9 +1,22 @@
-# Agent Run Semantics Contract v0.1（提案 / proposal）
+# Agent Run Semantics Contract v0.2（提案 / proposal）
 
-**A cross-language reliability contract for agent runs** — status machine, idempotency, budget (integer micro-USD), audit hash chain, and `outcome_unknown` semantics.
+**A cross-language reliability contract for agent runs** — states & legal transitions, idempotency scope, integer micro-USD budget (`reserve → settle`), hash-chained audit with canonical JSON, capability-tiered tools, and a first-class `outcome_unknown` state.
 
-> **Status: awaiting at least 2 external technical reviews.** This is a proposal, not a finished standard.
-> 👉 **[Read the proposal](PROPOSAL.md)** · **[Give a review](https://github.com/qlheric/agent-run-semantics-contract/issues/new?template=run-semantics-response.md)**
+> **Status: v0.2-draft, awaiting at least 2 external technical reviews.**
+> 👉 **[Read the proposal](PROPOSAL.md)** · **[Give a 10-minute review](https://github.com/qlheric/agent-run-semantics-contract/issues/new?template=run-semantics-response.md)** · **[Discussion issue #1](https://github.com/qlheric/agent-run-semantics-contract/issues/1)**
+>
+> **New in v0.2**: a *Related work & differences* section comparing A2A 1.0.0, the MCP Tasks extension (`2026-07-28`), OpenTelemetry GenAI conventions, and the "ambiguous outcomes" technical note (DOI 10.5281/zenodo.22969881) — including the parts where **they already cover what we thought was missing**, and a *review-in-10-minutes* path.
+
+## Why this exists
+
+Protocols standardise *how agents talk* (A2A) and *how long-running tool calls are tracked* (MCP Tasks). They deliberately leave to implementations the decisions that determine whether a retry is safe:
+
+- which state transitions are legal (and which are terminal),
+- whether a side effect may already have happened when the outcome is unknown,
+- how budget is reserved and settled (integer micro-USD, never double-charged),
+- what an auditable, cross-language-verifiable record looks like.
+
+This repo proposes those as an **interoperable contract**: JSON Schema + fixtures + a conformance protocol. Not a framework, not a runtime.
 
 ## What's in this repo
 
@@ -16,48 +29,29 @@ contract/
   fixtures/valid/*.json       # 9 valid examples
   fixtures/invalid/*.json     # 5 negative examples (must be rejected, with paths)
 tools/
-  contract_check.py           # Python reference validator (stdlib only)
+  contract_check.py           # Python reference validator
 ```
 
-## Try it
+## Try it (2 minutes)
 
 ```bash
 python -m pip install "jsonschema>=4.20"   # only dependency of the validator
 python tools/contract_check.py --all
-# rejected contract/fixtures/invalid/negative_budget.json path=/run/budget/max_cost_usd
-# ...
 # valid=9/9 passed
 # invalid=5/5 rejected
-
 python tools/contract_check.py --digest contract/fixtures/valid/step_full.json
-# canonical: {...}
-# sha256: <64 hex>
-
-python tools/contract_check.py --coverage   # enum/boundary coverage as one-line JSON
-python tools/contract_check.py --fields     # required field paths as one-line JSON
 ```
 
-Exit codes: `0` all good · `2` invalid fixture / rejection path mismatch · `1` environment error.
+## The four questions we most want answered
 
-## Why we think this is worth reviewing
-
-- **A single authority for transitions** instead of per-framework state machines.
-- **Integer micro-USD everywhere** with `reserve → settle` (retries never reserve twice, difference refunded).
-- **Hash-chained audit** with a byte-exact canonical JSON so two languages can verify each other's chains.
-- **`outcome_unknown` is a first-class state**: side effects may have happened; automatic retry is forbidden.
-- Implemented independently twice (Java control plane, Python translation layer) and compared **byte for byte** across the same fixtures.
-
-## Review questions (details in [PROPOSAL.md](PROPOSAL.md#5-five-questions-we-want-answered))
-
-1. Where should the authoritative transition table live?
-2. Who decides `outcome_unknown` retries — control plane or execution plane?
-3. Is our canonical JSON enough, or should we adopt JCS (RFC 8785)?
-4. Are the 18 required fields too many / too few?
-5. Does an existing standard already cover this (MCP / A2A / OTel GenAI / CloudEvents…)?
+1. **Profile or standalone?** Should this be an A2A profile / MCP extension instead of its own schema?
+2. **Vocabulary**: should `waiting_approval` be `input_required` and `outcome_unknown` be `UNKNOWN` (aligning with MCP Tasks and the ambiguous-outcomes model)?
+3. **Duplicate check**: given §2 of the proposal, which parts are *already standardised*? We will delete or fold anything covered.
+4. **Audit interop**: is our canonical JSON enough for cross-language chain verification, or should we adopt JCS (RFC 8785)?
 
 ## Honest limitations
 
-See [PROPOSAL.md §7](PROPOSAL.md#7-known-gaps-honest-list): README-grep evidence, unverified support matrices, fixture tables not yet aligned with the authoritative one, cost accounting tokens-only.
+See [PROPOSAL.md §6](PROPOSAL.md#6-known-gaps-honest-list). Summary: related-work survey is documentation-level, OTel mapping not written, no multi-tenant scope, cost accounting is tokens-only (`cost = null`, we do not fabricate prices).
 
 ## License
 

@@ -1,89 +1,97 @@
-# Agent Run Semantics Contract v0.1 — Proposal
+# Agent Run Semantics Contract v0.2 (proposal, for review)
 
-> **Status**: awaiting **at least 2 external technical reviews**. This is a *proposal for review*, not a finished standard.
-> Response channel: **[open an issue](https://github.com/qlheric/agent-run-semantics-contract/issues/new?template=run-semantics-response.md)** with tag `[run-semantics]`.
-> Every external review will be listed here by name with what we accepted / rejected and why.
+> **Status**: v0.2-draft, seeking **at least 2 external technical reviews**.
+> **What changed in v0.2**: added a *Related work & differences* section (A2A 1.0.0, MCP Tasks extension, OpenTelemetry GenAI, and the "ambiguous outcomes" technical note), narrowed our claims, and added a *review-in-10-minutes* path.
+> Response channel: open an issue with `[run-semantics]` (template provided) or comment on #1.
+> Every external review will be listed by name in this file with accept/reject decisions.
 
-## 1. The problem
+## 0. Short version
 
-Multi-agent systems have no shared contract for **"reliability semantics of one run"** (state machine, idempotency, budget, audit, timeout, retry):
+A **reliability contract for one run**: states, legal transitions, idempotency scope, integer micro-USD budget (`reserve → settle`), hash-chained audit with canonical JSON, capability-tiered tool exposure, and a first-class `outcome_unknown` state. It is expressed as a JSON Schema + fixtures + a cross-language conformance protocol, and has been implemented independently twice (Java control plane, Python translation layer) with byte-identical validation results.
 
-- every framework defines its own run/step states and termination reasons ⇒ no interoperability;
-- whether a side effect gets executed twice on retry/crash-recovery depends on implementation details;
-- budget and audit units differ (float vs integer micro-USD, hash chain vs plain log);
-- there is no checkable boundary between a **control plane** (scheduling / approval / delivery gate) and an **execution plane** (agent runtime).
+**We do not claim to be first.** Several adjacent standards exist (see §2). Our bet is narrower: these are *contract-level* decisions that protocols leave to implementations, and they are the ones that decide whether "retry" is safe.
 
-This proposal is one minimal-but-complete answer: a JSON Schema + 14 valid/invalid fixtures + a cross-language conformance protocol, implemented independently twice (Java control plane, Python translation layer).
-
-## 2. Contract shape (v0.1)
+## 1. Contract shape (v0.2)
 
 - A run document = `{spec, run, step[]}` plus root-level transition metadata; `additionalProperties: false` at every level.
-- **18 required fields** (see `contract/README.md`). Most relevant here:
+- **18 required fields**; clone-and-run validator in `tools/contract_check.py`.
 
-| Field | Semantics |
+| Area | Decision |
 |---|---|
-| `run.status` | 9 states: `created / running / waiting_approval / paused / degraded / succeeded / failed / cancelled / outcome_unknown` |
-| status transitions | **single authority = `contract/status-transitions.json`** (schema only defines the shape; fixture-level tables are examples) |
-| `run.budget.max_cost_usd` | **integer micro-USD**, floats rejected; two-phase `reserve → settle`, retries never reserve twice, difference refunded |
-| `step.attempt` / `run.policy.max_attempts` | attempt number / retry ceiling |
-| `step.idempotency_scope` | idempotency scope `run_id/step_id/tool` (nullable) |
-| `run.termination.reason` | `completed / tool_error / budget_exhausted / deadline_exceeded / approval_denied / cancelled_by_caller / degraded_circuit_break` |
-| `run.audit[]` | append-only hash chain: `hash = sha256(seq|ts|type|run_id|step_id|attempt|canonical(payload)|prev_hash)`, first `prev_hash` = 64 zeros |
-| `run.tools[]` | tool catalog filtered by `policy.capability_tier` (`read/write/destructive`) |
-| `outcome_unknown` | side effect may have happened: **automatic retry forbidden**; consult the idempotency ledger before recovery |
+| States | 9: `created / running / waiting_approval / paused / degraded / succeeded / failed / cancelled / outcome_unknown` |
+| Transitions | **single authority = `contract/status-transitions.json`** (schema only defines shape; fixture tables are examples) |
+| Budget | **integer micro-USD**, floats rejected; `reserve → settle`; retries never reserve twice; difference refunded |
+| Idempotency | `step.idempotency_scope = run_id/step_id/tool`; `step.attempt` + `policy.max_attempts` |
+| Audit | append-only hash chain: `sha256(seq|ts|type|run_id|step_id|attempt|canonical(payload)|prev_hash)`, genesis `prev_hash` = 64 zeros |
+| Tools | catalog filtered by `policy.capability_tier` (`read/write/destructive`), approval gate (PEP) outside the model |
+| Ambiguity | `outcome_unknown`: side effect may have happened ⇒ **automatic retry forbidden**; resolve via ledger/reconciliation |
+| Canonical JSON | keys by code point, arrays preserved, null keys dropped, NFC, UTF-8 unescaped, floats always rejected |
 
-- **Canonical JSON**: keys sorted by code point, arrays in order, null-valued keys removed, NFC normalized, UTF-8 unescaped, floats always rejected (exit 2).
+## 2. Related work & differences (new in v0.2 — the main thing we want reviewed)
 
-## 3. Cross-language conformance
+We deliberately compare against the nearest work instead of asserting novelty.
 
-The Python reference validator (`tools/contract_check.py`, dependency: `jsonschema`) and an independent Java implementation validate the **same fixture set**:
+| Work | What it already covers | What this proposal adds / differs | Open question for reviewers |
+|---|---|---|---|
+| **A2A Protocol v1.0.0** ([spec](https://a2a-protocol.org/latest/specification/)) | Inter-agent protocol: Task data model, task states, idempotency semantics (§3.3.1), streaming & async delivery, task listing/cancel; terminal tasks cannot restart | A2A is a **messaging/interop** standard between agents; it intentionally leaves budget accounting, audit-chain format, and tool-capability tiers to implementations. We add a *control-plane ⇄ execution-plane* contract for those, plus a canonical transition-table artifact | Should this contract be re-expressed as an **A2A profile** (map our 9 states onto A2A TaskState + budget/audit extensions) instead of a standalone schema? |
+| **MCP Tasks extension** (protocol `2026-07-28`, `io.modelcontextprotocol/tasks`; [overview](https://modelcontextprotocol.io/extensions/tasks/overview)) | Long-running operation lifecycle: `working / input_required / completed / failed / cancelled`, durable task handle, `tasks/get|update|cancel`, TTL + poll interval; task-augmented calls are not retried while inline calls may retry on transport error | MCP Tasks is a **transport/session** lifecycle. We specify run-level semantics *around* it: budget reservation, audit chain, idempotency scope, and explicit `outcome_unknown` semantics | Should our state names align to MCP task statuses (`input_required` vs `waiting_approval`), and should "task calls are never retried" be a rule in this contract? |
+| **OpenTelemetry GenAI semantic conventions** (in Development as of 2026; `gen_ai.*`, `invoke_agent` / `chat` / `execute_tool` spans) | Observability: span naming and attributes for agent and tool calls | Telemetry ≠ semantics: OTel can describe a retry but cannot forbid it. We keep the contract separate and expose an audit payload that can be projected into spans | Are our audit entry fields a superset/subset of what OTel agent spans need? Should we publish a projection mapping? |
+| **"Reliable Execution of Consequential AI Agent Actions Under Retries and Ambiguous Outcomes"** — Oswald, *Once Research*, technical note v1.0, 2026-09-26, DOI [10.5281/zenodo.22969881](https://doi.org/10.5281/zenodo.22969881) | Frames the ambiguous-outcome execution problem; logical operation identity, effect binding, durable outcome state, conservative `UNKNOWN` handling, reconciliation, selective protection of consequential mutations; reference implementation "Once"; explicitly does *not* claim universal exactly-once | Substantial overlap with our `outcome_unknown` + idempotency + capability tiers. Our deliverable differs in form: JSON Schema + 14 fixtures + cross-language conformance — something two vendors can *check against each other* rather than integrate a component | Is our contract a defensible *interop layer* for this model, or should it be folded into that work's terminology (e.g. rename `outcome_unknown` → `UNKNOWN`)? Being told "you are a profile of prior art" is a useful review. |
+| **Agentic AI Foundation / ecosystem consolidation** (A2A joined AAIF, 2026-08) | Distribution and governance for agent interop | We do not want a competing standard; we want a reviewable artifact and, if it survives review, a home in an existing effort | Which venue should this be proposed to (AAIF working group? A2A extension? MCP extension?) rather than a standalone repo? |
 
-- all `valid/` pass, all `invalid/` rejected, **rejection paths and exit codes agree**;
-- canonical JSON and `sha256` are **byte-identical** across 14 fixtures;
-- exit-code discipline: Maven wrappers fold any non-zero into 1, so exit-code-sensitive comparison must call the JVM directly (documented in `contract/CONFORMANCE.md`).
+**What we explicitly do NOT claim**: that no one has solved this; that our schema is frozen; that our implementation is a reference for multi-tenant or exactly-once delivery.
 
-Try it:
+## 3. Cross-language conformance (the checkable part)
+
+Python validator + independent Java implementation validate the **same fixtures**:
 
 ```bash
-python tools/contract_check.py --all        # valid=9/9, invalid=5/5
+python -m pip install "jsonschema>=4.20"
+python tools/contract_check.py --all     # valid=9/9, invalid=5/5
 python tools/contract_check.py --digest contract/fixtures/valid/step_full.json
-python tools/contract_check.py --coverage   # enum/boundary coverage JSON
 ```
 
-## 4. Reference implementations (evaluable evidence)
+- valid/invalid fixtures: same reject **paths** and exit codes across implementations;
+- canonical JSON + sha256: byte-identical across 14 fixtures;
+- exit-code discipline documented (`mvn` wrappers fold exit codes).
 
-| Implementation | Language | Coverage |
-|---|---|---|
-| Control plane (private) | Java 21 / JDK 25 | run creation, persisted idempotency store, budget ledger, injectable clock, HTTP API, hash-chained audit + verify, MCP policy proxy (tier filtering, per-call budget/ledger/audit), degraded executor, fault injection + startup reconciliation — **182 tests** |
-| Translation layer (private) | Python 3.14 | dispatch⇄run mapping, real HTTP client, headless worker event chain, approval ask/card, governance (global switch/wall clock/dead-man switch/usage 5 fields/rejection rate), eight-step delivery gate, two-level verify — **364 tests** |
+## 4. Review in 10 minutes (new)
 
-Key behaviours have negative controls: a tampered audit chain must be detected by `verify()`; `outcome_unknown` is never auto-retried; degraded mode denies writes but allows reads; corrupted catalogs fail loud. Both implementations can be made available to reviewers on request.
+1. **3 min** — read §1 table and `contract/status-transitions.json` (about 30 lines). Ask: *is any legal edge missing or unsafe?*
+2. **2 min** — read the budget rules (`reserve → settle`, integer micro-USD). Ask: *can a retry double-charge under this wording?*
+3. **2 min** — read the audit hash formula + canonical JSON rules. Ask: *could two implementations legitimately produce different hashes?*
+4. **2 min** — skim `outcome_unknown` semantics + the ambiguous-outcomes row in §2. Ask: *is this the same object as their UNKNOWN, and are we duplicating it?*
+5. **1 min** — answer any **one** of the questions in §2/§5 in an issue. A link is a valid review.
 
-## 5. Five questions we want answered
+## 5. Questions we want answered (revised in v0.2)
 
-1. **Where should the authoritative transition-edge table live?** We chose a standalone file (`status-transitions.json`); schema-inline constants or code-derived edges are alternatives.
-2. **Who should decide on retries for `outcome_unknown`?** Control plane (owns the ledger) or execution plane (owns tool context)? Counter-examples welcome.
-3. **Is our canonical JSON enough for cross-language audit-chain interoperability?** Should we adopt JCS (RFC 8785) instead?
-4. **Are the 18 required fields too many or too few?** Especially the relationship between `step.idempotency_scope` and tool-level idempotency-key templates, and the shape of step-level approvals.
-5. **Does an equivalent standard already exist?** (MCP / A2A / OTel GenAI semantic conventions / CloudEvents / others). Please point out differences — we would rather become compatible than invent parallel work.
+1. **Profile or standalone?** Should this contract be an A2A profile / MCP extension rather than a separate schema? If yes, what is the minimal mapping (states, budget, audit)?
+2. **State naming**: should `waiting_approval` become `input_required` (MCP vocabulary) and `outcome_unknown` become `UNKNOWN` (ambiguous-outcomes vocabulary)?
+3. **Retry rule**: is "task-augmented calls are never retried" a rule that belongs in this contract, and at which layer?
+4. **Budget semantics**: does `reserve → settle` with integer micro-USD survive provider-side pricing changes mid-run? What should happen when the price snapshot is missing (`cost = null` today)?
+5. **Audit interop**: is our canonical JSON sufficient for cross-language chain verification, or should we adopt JCS (RFC 8785)?
+6. **Duplication check**: given the four works in §2, which parts of this contract are *already standardised*, and which are genuinely missing? We will delete or fold anything already covered.
 
-## 6. What this proposal does *not* claim
+## 6. Known gaps (honest list)
 
-- Not a new agent framework, orchestration engine, or trace/eval platform.
-- No claim of being first; if a standard already covers this, say so.
-- The schema is not frozen: known gaps below are fair game.
+1. "Mainstream frameworks do not expose agent-step reliability semantics" is based on README/documentation review, not source reading; undocumented precedents may exist.
+2. OTel GenAI conventions are still in Development; our projection mapping is not written.
+3. Spring Boot / JDK 25 support matrices were not verified (implementation avoids Lombok, targets Java 21).
+4. Fixture-level transition tables are not yet forced to match the authoritative table (examples only).
+5. Cost accounting records tokens only; without a price source `cost_micro_usd` is `null` (we refuse to fabricate numbers).
+6. No multi-tenant or multi-run scheduling semantics in scope.
 
-## 7. Known gaps (honest list)
+## 7. How to respond
 
-1. "Mainstream harnesses do not expose agent-step reliability semantics" is based on README grep, not source reading; undocumented precedents may exist.
-2. "No governance layer on the JVM side" is based on three repositories' README capability tables.
-3. Spring Boot support matrix for JDK 25, and Lombok/Byte Buddy compatibility, were not verified (implementation avoids Lombok, targets Java 21).
-4. Maturity of OTel GenAI semantic conventions as of 2026-11 was not verified.
-5. Fixture-level transition tables are not yet forced to match the authoritative table (examples only).
-6. Cost accounting currently records tokens only; without a price source `cost_micro_usd` is `null` (we refuse to fabricate numbers).
+- Open an issue with `[run-semantics]` (template provided) or comment on #1.
+- "You are duplicating X; here is the spec link" is a complete and welcome review.
+- We commit to listing **every** external review by name with accept/reject decisions, without rewriting or hiding discussion.
 
-## 8. How to respond
+## Appendix A — Reference implementations (evaluable evidence)
 
-- Open an issue with tag `[run-semantics]` (template provided), or comment on an existing review issue.
-- Pointing at an existing standard with links is a perfectly good review.
-- We commit to listing **every** external review by name and recording accept/reject decisions, without rewriting or hiding the discussion.
+| Implementation | Language | Coverage | Tests |
+|---|---|---|---|
+| Control plane (private) | Java 21 / JDK 25 | run creation, persisted idempotency store, budget ledger, injectable clock, HTTP API, hash-chained audit + verify, MCP policy proxy (tier filtering, per-call budget/ledger/audit), degraded executor, fault injection + startup reconciliation | 198 |
+| Translation layer (private) | Python 3.14 | dispatch⇄run mapping, real HTTP client, headless worker event chain, approval ask/card, governance (wall clock, dead-man switch, usage accounting), delivery gate, Feishu gateway, daily report | 604 (+3 slow, skipped by default) |
+
+Key behaviours have negative controls: a tampered audit chain is detected; `outcome_unknown` is never auto-retried; degraded mode denies writes but allows reads; approval denial leaves zero side effects.
