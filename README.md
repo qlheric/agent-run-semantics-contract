@@ -2,10 +2,21 @@
 
 **A cross-language reliability contract for agent runs** — states & legal transitions, idempotency scope, integer micro-USD budget (`reserve → settle`), hash-chained audit with canonical JSON, capability-tiered tools, and a first-class `outcome_unknown` state.
 
-> **Status: v0.2-draft, awaiting at least 2 external technical reviews.**
+> **Status: v0.2-draft → v0.3 in progress. First external technical review received (see below).**
 > 👉 **[Read the proposal](PROPOSAL.md)** · **[Give a 10-minute review](https://github.com/qlheric/agent-run-semantics-contract/issues/new?template=run-semantics-response.md)** · **[Discussion issue #1](https://github.com/qlheric/agent-run-semantics-contract/issues/1)**
 >
 > **New in v0.2**: a *Related work & differences* section comparing A2A 1.0.0, the MCP Tasks extension (`2026-07-28`), OpenTelemetry GenAI conventions, and the "ambiguous outcomes" technical note (DOI 10.5281/zenodo.22969881) — including the parts where **they already cover what we thought was missing**, and a *review-in-10-minutes* path.
+
+## External review status
+
+| # | Reviewer | Type | Date | Headline | Our disposition |
+|---|---|---|---|---|---|
+| 01 | 豆包 (AI reviewer, relayed by owner) | **AI technical review** — not a human maintainer | 2026-11-06 | "Duplicate shell, not core": states/tool tiers/idempotency are standardised; conformance criteria are not. **Found 3 hard defects** in our artifacts | **All 3 defects verified true and accepted.** Full record + evidence: [`REVIEWS/2026-11-06-review-01.md`](REVIEWS/2026-11-06-review-01.md). v0.3 fixes in progress |
+
+**Known defects accepted (v0.3 work):** (1) the validator never read `status-transitions.json`; (2) fixture audit hashes were placeholders and do not match our own formula; (3) "two implementations, byte-identical" is not externally verifiable from this repo. Also accepted: fold state names to MCP/A2A vocabulary, fold tool tiers to MCP ToolAnnotations, fold idempotency to the IETF `Idempotency-Key` draft, adopt JCS for the audit hash input, split `degraded` into `run.mode`.
+
+> Goal remains **≥2 independent human maintainer / implementer reviews**; AI reviews are recorded but do not count toward that goal.
+
 
 ## Why this exists
 
