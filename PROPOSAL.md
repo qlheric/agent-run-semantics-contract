@@ -1,20 +1,32 @@
-# Agent Run Semantics Contract v0.2 (proposal, for review)
+# Agent Run Semantics Contract v0.4.0 (proposal, for review)
 
-> **Status**: v0.2-draft, seeking **at least 2 external technical reviews**.
-> **What changed in v0.2**: added a *Related work & differences* section (A2A 1.0.0, MCP Tasks extension, OpenTelemetry GenAI, and the "ambiguous outcomes" technical note), narrowed our claims, and added a *review-in-10-minutes* path.
+> **Status**: v0.4.0-draft, seeking **at least 2 external technical reviews**. The three hard defects from review 01 are fixed; version history in [`CHANGELOG.md`](CHANGELOG.md).
+> **What changed since review 01**: transition-table authority is now real (both implementations read it), audit hashes are computed per RFC 8785 JCS (all fixtures recomputed), `reserve → settle` and `step[]` are in the schema, `outcome_unknown → running` is removed and blacklisted, and a new **`--replay`** check ties the audit chain to the state machine.
+> **The claim we now consider checkable**: *an audit chain that replays into a legal state sequence, and refuses to leave `outcome_unknown` without evidence.*
 > Response channel: open an issue with `[run-semantics]` (template provided) or comment on #1.
 > Every external review will be listed by name in this file with accept/reject decisions.
 
 ## 0. Short version
 
-A **reliability contract for one run**: states, legal transitions, idempotency scope, integer micro-USD budget (`reserve → settle`), hash-chained audit with canonical JSON, capability-tiered tool exposure, and a first-class `outcome_unknown` state. It is expressed as a JSON Schema + fixtures + a cross-language conformance protocol, and has been implemented independently twice (Java control plane, Python translation layer) with byte-identical validation results.
+A **reliability contract for one run**: states, legal transitions, idempotency scope, integer micro-USD budget (`reserve → settle`), JCS-hashed audit chain, capability-tiered tool exposure, and a first-class `outcome_unknown` state that **cannot silently re-enter execution**. It is expressed as a JSON Schema + fixtures + a cross-language conformance protocol, and has been implemented independently twice (Java control plane, Python translation layer) with **byte-identical** validation output.
 
 **We do not claim to be first.** Several adjacent standards exist (see §2). Our bet is narrower: these are *contract-level* decisions that protocols leave to implementations, and they are the ones that decide whether "retry" is safe.
 
-## 1. Contract shape (v0.2)
+## 0.1 The one property we are willing to call novel
 
-- A run document = `{spec, run, step[]}` plus root-level transition metadata; `additionalProperties: false` at every level.
-- **18 required fields**; clone-and-run validator in `tools/contract_check.py`.
+`--replay` takes the audit chain (hash-chained, JCS-canonical) and replays every `state_transition` entry against the **authoritative** transition table:
+
+1. the first `from` must be `created`;
+2. each `from` must equal the previous entry's `to`;
+3. every edge must be legal in `status-transitions.json`;
+4. leaving `outcome_unknown` for a terminal state requires `payload.evidence_ref` (reconciliation evidence).
+
+Consequence: **tampering with any state transition breaks both the hash chain and the replay check.** A chain that merely appends hashes cannot make that statement. We believe this combination (replayable audit ⇒ legal state sequence) is not present in A2A, MCP Tasks, or OTel GenAI.
+
+## 1. Contract shape (v0.4.0)
+
+- A run document = `{spec, run, step[]}`; `additionalProperties: false` at every level, with an `extensions`/`x-` escape hatch for interoperable extension fields.
+- **51 exported fields** (`python tools/contract_check.py --fields --count`); clone-and-run validator in `tools/contract_check.py`.
 
 | Area | Decision |
 |---|---|
