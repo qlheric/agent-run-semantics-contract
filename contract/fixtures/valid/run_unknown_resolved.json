@@ -1,0 +1,188 @@
+{
+  "$comment": "v0.4 replay 样例：outcome_unknown→succeeded 带 evidence_ref（外部对账证据），离开未知态必须带证据（无证据 ⇒ --replay 判红）",
+  "spec": {
+    "version": "0.4.0",
+    "clock": "wall",
+    "framework": "langgraph"
+  },
+  "run": {
+    "run_id": "run_unknown_resolved_015",
+    "status": "succeeded",
+    "clock": "wall",
+    "idempotency_key": "idem-run_unknown_resolved_015",
+    "policy": {
+      "capability_tier": "read",
+      "max_attempts": 2,
+      "retry_profile": {
+        "name": "read_only",
+        "max_attempts": 2,
+        "backoff_ms": 100,
+        "retryable_tools": [
+          "search"
+        ]
+      }
+    },
+    "budget": {
+      "max_steps": 8,
+      "max_tool_calls": 16,
+      "max_tokens": 40000,
+      "max_cost_usd": 2000000,
+      "currency": "USD",
+      "price_snapshot_id": "price-2026-11-01"
+    },
+    "termination": {
+      "reason": "completed",
+      "detail": "对账确认副作用已落库，证据见 evidence_ref"
+    },
+    "error": null,
+    "side_effect_unknown": false,
+    "audit": [
+      {
+        "seq": 0,
+        "ts_ms": 1793613600000,
+        "type": "state_transition",
+        "run_id": "run_unknown_resolved_015",
+        "step_id": "step_0",
+        "attempt": 1,
+        "payload": {
+          "from": "created",
+          "to": "running",
+          "actor": "executor",
+          "cause": "run created and started"
+        },
+        "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "hash": "0f0e530c7532ee6f9a4cd06569a92ac1437af279f5aff56cfc3ee9f186065d0a"
+      },
+      {
+        "seq": 1,
+        "ts_ms": 1793613601000,
+        "type": "state_transition",
+        "run_id": "run_unknown_resolved_015",
+        "step_id": "step_0",
+        "attempt": 1,
+        "payload": {
+          "from": "running",
+          "to": "outcome_unknown",
+          "actor": "executor",
+          "cause": "non-idempotent side effect connection lost"
+        },
+        "prev_hash": "0f0e530c7532ee6f9a4cd06569a92ac1437af279f5aff56cfc3ee9f186065d0a",
+        "hash": "510a413c4c0a23546c138dec7750ff07b880310efb6f089df229e282e459784b"
+      },
+      {
+        "seq": 2,
+        "ts_ms": 1793613602000,
+        "type": "state_transition",
+        "run_id": "run_unknown_resolved_015",
+        "step_id": "step_0",
+        "attempt": 1,
+        "payload": {
+          "from": "outcome_unknown",
+          "to": "succeeded",
+          "actor": "human",
+          "cause": "reconciled with external system",
+          "evidence_ref": "recon://ledger/2026-11-07/ord-0002"
+        },
+        "prev_hash": "510a413c4c0a23546c138dec7750ff07b880310efb6f089df229e282e459784b",
+        "hash": "f89276cca3d065493487ed7109f567f85d3b73d9c66429a90a864b652f556e09"
+      }
+    ],
+    "tools": [
+      {
+        "tool": "search",
+        "tier": "read",
+        "args_schema": {
+          "type": "object",
+          "required": [
+            "query"
+          ]
+        },
+        "side_effect": "none",
+        "dedupe_key_template": "run/{run_id}/step/{step_id}/search",
+        "result_budget_bytes": 8192
+      }
+    ],
+    "reservations": []
+  },
+  "step": [
+    {
+      "step_id": "step_0",
+      "attempt": 1,
+      "side_effect": "none",
+      "dedupe_scope": "run_unknown_resolved_015/step_0/search",
+      "effective_tier": "read",
+      "approval": {
+        "required": false,
+        "status": "approved",
+        "by": "system",
+        "at": "2026-11-02T10:00:00Z"
+      },
+      "args": {
+        "query": "replay 校验"
+      },
+      "granted": {
+        "deadline_at_ms": 1793594400000,
+        "deadline_ms": 30000,
+        "clock": "wall",
+        "scope": "run_unknown_resolved_015/step_0/search",
+        "quota": {
+          "cost_usd": 100000,
+          "tool_calls": 5,
+          "tokens": 20000
+        }
+      },
+      "grant_request": {
+        "run_id": "run_unknown_resolved_015",
+        "step_id": "step_0",
+        "attempt": 1,
+        "dedupe_scope": "run_unknown_resolved_015/step_0/search",
+        "tool": "search",
+        "args": {
+          "query": "replay 校验"
+        }
+      }
+    }
+  ],
+  "x-status-transitions": {
+    "created": [
+      "cancelled",
+      "running",
+      "waiting_approval"
+    ],
+    "running": [
+      "cancelled",
+      "degraded",
+      "failed",
+      "outcome_unknown",
+      "paused",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "waiting_approval": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "paused": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "degraded": [
+      "cancelled",
+      "failed",
+      "outcome_unknown",
+      "running",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "succeeded": [],
+    "failed": [],
+    "cancelled": [],
+    "outcome_unknown": [
+      "cancelled",
+      "failed",
+      "succeeded"
+    ]
+  }
+}

@@ -1,0 +1,186 @@
+{
+  "$comment": "负例：state_transition 里出现非法边 succeeded→running（终态无出口）⇒ --replay 判红，路径 /run/audit/2/payload",
+  "spec": {
+    "version": "0.4.0",
+    "clock": "wall",
+    "framework": "langgraph"
+  },
+  "run": {
+    "run_id": "run_illegal_edge_016",
+    "status": "succeeded",
+    "clock": "wall",
+    "idempotency_key": "idem-run_illegal_edge_016",
+    "policy": {
+      "capability_tier": "read",
+      "max_attempts": 2,
+      "retry_profile": {
+        "name": "read_only",
+        "max_attempts": 2,
+        "backoff_ms": 100,
+        "retryable_tools": [
+          "search"
+        ]
+      }
+    },
+    "budget": {
+      "max_steps": 8,
+      "max_tool_calls": 16,
+      "max_tokens": 40000,
+      "max_cost_usd": 2000000,
+      "currency": "USD",
+      "price_snapshot_id": "price-2026-11-01"
+    },
+    "termination": {
+      "reason": "completed"
+    },
+    "error": null,
+    "side_effect_unknown": false,
+    "audit": [
+      {
+        "seq": 0,
+        "ts_ms": 1793613600000,
+        "type": "state_transition",
+        "run_id": "run_illegal_edge_016",
+        "step_id": "step_0",
+        "attempt": 1,
+        "payload": {
+          "from": "created",
+          "to": "running",
+          "actor": "executor",
+          "cause": "run created and started"
+        },
+        "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "hash": "d156867e8fc065ba4ba9a172f76e59a587e0b2929002cd00fee61f9ca631f3d1"
+      },
+      {
+        "seq": 1,
+        "ts_ms": 1793613601000,
+        "type": "state_transition",
+        "run_id": "run_illegal_edge_016",
+        "step_id": "step_0",
+        "attempt": 1,
+        "payload": {
+          "from": "running",
+          "to": "succeeded",
+          "actor": "control_plane",
+          "cause": "all steps completed"
+        },
+        "prev_hash": "d156867e8fc065ba4ba9a172f76e59a587e0b2929002cd00fee61f9ca631f3d1",
+        "hash": "33c37964bb4214a8cca0a69fbc07f751becda29533b0860e0735ac8119b57d50"
+      },
+      {
+        "seq": 2,
+        "ts_ms": 1793613602000,
+        "type": "state_transition",
+        "run_id": "run_illegal_edge_016",
+        "step_id": "step_0",
+        "attempt": 1,
+        "payload": {
+          "from": "succeeded",
+          "to": "running",
+          "actor": "executor",
+          "cause": "tampered transition"
+        },
+        "prev_hash": "33c37964bb4214a8cca0a69fbc07f751becda29533b0860e0735ac8119b57d50",
+        "hash": "60024b37eb51178880132b0f6eda2201847cb9e1da5b074c5c4e3715255ab93e"
+      }
+    ],
+    "tools": [
+      {
+        "tool": "search",
+        "tier": "read",
+        "args_schema": {
+          "type": "object",
+          "required": [
+            "query"
+          ]
+        },
+        "side_effect": "none",
+        "dedupe_key_template": "run/{run_id}/step/{step_id}/search",
+        "result_budget_bytes": 8192
+      }
+    ],
+    "reservations": []
+  },
+  "step": [
+    {
+      "step_id": "step_0",
+      "attempt": 1,
+      "side_effect": "none",
+      "dedupe_scope": "run_illegal_edge_016/step_0/search",
+      "effective_tier": "read",
+      "approval": {
+        "required": false,
+        "status": "approved",
+        "by": "system",
+        "at": "2026-11-02T10:00:00Z"
+      },
+      "args": {
+        "query": "replay 校验"
+      },
+      "granted": {
+        "deadline_at_ms": 1793594400000,
+        "deadline_ms": 30000,
+        "clock": "wall",
+        "scope": "run_illegal_edge_016/step_0/search",
+        "quota": {
+          "cost_usd": 100000,
+          "tool_calls": 5,
+          "tokens": 20000
+        }
+      },
+      "grant_request": {
+        "run_id": "run_illegal_edge_016",
+        "step_id": "step_0",
+        "attempt": 1,
+        "dedupe_scope": "run_illegal_edge_016/step_0/search",
+        "tool": "search",
+        "args": {
+          "query": "replay 校验"
+        }
+      }
+    }
+  ],
+  "x-status-transitions": {
+    "created": [
+      "cancelled",
+      "running",
+      "waiting_approval"
+    ],
+    "running": [
+      "cancelled",
+      "degraded",
+      "failed",
+      "outcome_unknown",
+      "paused",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "waiting_approval": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "paused": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "degraded": [
+      "cancelled",
+      "failed",
+      "outcome_unknown",
+      "running",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "succeeded": [],
+    "failed": [],
+    "cancelled": [],
+    "outcome_unknown": [
+      "cancelled",
+      "failed",
+      "succeeded"
+    ]
+  }
+}

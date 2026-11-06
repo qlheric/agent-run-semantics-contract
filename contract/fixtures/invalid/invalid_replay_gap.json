@@ -1,0 +1,170 @@
+{
+  "$comment": "负例：state_transition 链式断裂（第 2 条 from=degraded，上一条 to=running）⇒ --replay 判红，路径 /run/audit/1/payload/from",
+  "spec": {
+    "version": "0.4.0",
+    "clock": "wall",
+    "framework": "langgraph"
+  },
+  "run": {
+    "run_id": "run_replay_gap_018",
+    "status": "succeeded",
+    "clock": "wall",
+    "idempotency_key": "idem-run_replay_gap_018",
+    "policy": {
+      "capability_tier": "read",
+      "max_attempts": 2,
+      "retry_profile": {
+        "name": "read_only",
+        "max_attempts": 2,
+        "backoff_ms": 100,
+        "retryable_tools": [
+          "search"
+        ]
+      }
+    },
+    "budget": {
+      "max_steps": 8,
+      "max_tool_calls": 16,
+      "max_tokens": 40000,
+      "max_cost_usd": 2000000,
+      "currency": "USD",
+      "price_snapshot_id": "price-2026-11-01"
+    },
+    "termination": {
+      "reason": "completed"
+    },
+    "error": null,
+    "side_effect_unknown": false,
+    "audit": [
+      {
+        "seq": 0,
+        "ts_ms": 1793613600000,
+        "type": "state_transition",
+        "run_id": "run_replay_gap_018",
+        "step_id": "step_0",
+        "attempt": 1,
+        "payload": {
+          "from": "created",
+          "to": "running",
+          "actor": "executor",
+          "cause": "run created and started"
+        },
+        "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "hash": "1e0854e28a10e3aca5ceded1c0bbeecd7874541f741d3300dd7eab4b249e8531"
+      },
+      {
+        "seq": 1,
+        "ts_ms": 1793613601000,
+        "type": "state_transition",
+        "run_id": "run_replay_gap_018",
+        "step_id": "step_0",
+        "attempt": 1,
+        "payload": {
+          "from": "degraded",
+          "to": "succeeded",
+          "actor": "control_plane",
+          "cause": "gap: from does not match previous to"
+        },
+        "prev_hash": "1e0854e28a10e3aca5ceded1c0bbeecd7874541f741d3300dd7eab4b249e8531",
+        "hash": "50f972dce90ab7f24039bcf14941cabfbeb3a1a6d075737e2c26b147a7dc569a"
+      }
+    ],
+    "tools": [
+      {
+        "tool": "search",
+        "tier": "read",
+        "args_schema": {
+          "type": "object",
+          "required": [
+            "query"
+          ]
+        },
+        "side_effect": "none",
+        "dedupe_key_template": "run/{run_id}/step/{step_id}/search",
+        "result_budget_bytes": 8192
+      }
+    ],
+    "reservations": []
+  },
+  "step": [
+    {
+      "step_id": "step_0",
+      "attempt": 1,
+      "side_effect": "none",
+      "dedupe_scope": "run_replay_gap_018/step_0/search",
+      "effective_tier": "read",
+      "approval": {
+        "required": false,
+        "status": "approved",
+        "by": "system",
+        "at": "2026-11-02T10:00:00Z"
+      },
+      "args": {
+        "query": "replay 校验"
+      },
+      "granted": {
+        "deadline_at_ms": 1793594400000,
+        "deadline_ms": 30000,
+        "clock": "wall",
+        "scope": "run_replay_gap_018/step_0/search",
+        "quota": {
+          "cost_usd": 100000,
+          "tool_calls": 5,
+          "tokens": 20000
+        }
+      },
+      "grant_request": {
+        "run_id": "run_replay_gap_018",
+        "step_id": "step_0",
+        "attempt": 1,
+        "dedupe_scope": "run_replay_gap_018/step_0/search",
+        "tool": "search",
+        "args": {
+          "query": "replay 校验"
+        }
+      }
+    }
+  ],
+  "x-status-transitions": {
+    "created": [
+      "cancelled",
+      "running",
+      "waiting_approval"
+    ],
+    "running": [
+      "cancelled",
+      "degraded",
+      "failed",
+      "outcome_unknown",
+      "paused",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "waiting_approval": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "paused": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "degraded": [
+      "cancelled",
+      "failed",
+      "outcome_unknown",
+      "running",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "succeeded": [],
+    "failed": [],
+    "cancelled": [],
+    "outcome_unknown": [
+      "cancelled",
+      "failed",
+      "succeeded"
+    ]
+  }
+}

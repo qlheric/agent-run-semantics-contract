@@ -1,0 +1,190 @@
+{
+  "$comment": "负例：outcome_unknown→succeeded 缺 evidence_ref（无外部对账证据不得离开未知态）⇒ --replay 判红，路径 /run/audit/2/payload/evidence_ref",
+  "spec": {
+    "version": "0.4.0",
+    "clock": "wall",
+    "framework": "langgraph"
+  },
+  "run": {
+    "run_id": "run_unknown_no_evidence_017",
+    "status": "outcome_unknown",
+    "clock": "wall",
+    "idempotency_key": "idem-run_unknown_no_evidence_017",
+    "policy": {
+      "capability_tier": "read",
+      "max_attempts": 2,
+      "retry_profile": {
+        "name": "read_only",
+        "max_attempts": 2,
+        "backoff_ms": 100,
+        "retryable_tools": [
+          "search"
+        ]
+      }
+    },
+    "budget": {
+      "max_steps": 8,
+      "max_tool_calls": 16,
+      "max_tokens": 40000,
+      "max_cost_usd": 2000000,
+      "currency": "USD",
+      "price_snapshot_id": "price-2026-11-01"
+    },
+    "termination": {
+      "reason": "tool_error",
+      "detail": "非幂等副作用失败：副作用状态未知，等待人工核对"
+    },
+    "error": {
+      "code": "tool_failed",
+      "message": "写外部系统时连接中断"
+    },
+    "side_effect_unknown": true,
+    "audit": [
+      {
+        "seq": 0,
+        "ts_ms": 1793613600000,
+        "type": "state_transition",
+        "run_id": "run_unknown_no_evidence_017",
+        "step_id": "step_0",
+        "attempt": 1,
+        "payload": {
+          "from": "created",
+          "to": "running",
+          "actor": "executor",
+          "cause": "run created and started"
+        },
+        "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "hash": "8f0e4f452524e3f1e47a7b3f2ee7d507fc4ca5a1402f5f359ff50c1e7c0e8b6b"
+      },
+      {
+        "seq": 1,
+        "ts_ms": 1793613601000,
+        "type": "state_transition",
+        "run_id": "run_unknown_no_evidence_017",
+        "step_id": "step_0",
+        "attempt": 1,
+        "payload": {
+          "from": "running",
+          "to": "outcome_unknown",
+          "actor": "executor",
+          "cause": "non-idempotent side effect connection lost"
+        },
+        "prev_hash": "8f0e4f452524e3f1e47a7b3f2ee7d507fc4ca5a1402f5f359ff50c1e7c0e8b6b",
+        "hash": "6af3091446cb8adcdb220468047fbd9c69c6d1e2a67a80c84fb20f40d4d0dbd1"
+      },
+      {
+        "seq": 2,
+        "ts_ms": 1793613602000,
+        "type": "state_transition",
+        "run_id": "run_unknown_no_evidence_017",
+        "step_id": "step_0",
+        "attempt": 1,
+        "payload": {
+          "from": "outcome_unknown",
+          "to": "succeeded",
+          "actor": "human",
+          "cause": "claimed resolved without evidence"
+        },
+        "prev_hash": "6af3091446cb8adcdb220468047fbd9c69c6d1e2a67a80c84fb20f40d4d0dbd1",
+        "hash": "89f90ca699a37b367406952261d342be3d1fd9ef9a695c9e04663c8c7e55d2fc"
+      }
+    ],
+    "tools": [
+      {
+        "tool": "search",
+        "tier": "read",
+        "args_schema": {
+          "type": "object",
+          "required": [
+            "query"
+          ]
+        },
+        "side_effect": "none",
+        "dedupe_key_template": "run/{run_id}/step/{step_id}/search",
+        "result_budget_bytes": 8192
+      }
+    ],
+    "reservations": []
+  },
+  "step": [
+    {
+      "step_id": "step_0",
+      "attempt": 1,
+      "side_effect": "none",
+      "dedupe_scope": "run_unknown_no_evidence_017/step_0/search",
+      "effective_tier": "read",
+      "approval": {
+        "required": false,
+        "status": "approved",
+        "by": "system",
+        "at": "2026-11-02T10:00:00Z"
+      },
+      "args": {
+        "query": "replay 校验"
+      },
+      "granted": {
+        "deadline_at_ms": 1793594400000,
+        "deadline_ms": 30000,
+        "clock": "wall",
+        "scope": "run_unknown_no_evidence_017/step_0/search",
+        "quota": {
+          "cost_usd": 100000,
+          "tool_calls": 5,
+          "tokens": 20000
+        }
+      },
+      "grant_request": {
+        "run_id": "run_unknown_no_evidence_017",
+        "step_id": "step_0",
+        "attempt": 1,
+        "dedupe_scope": "run_unknown_no_evidence_017/step_0/search",
+        "tool": "search",
+        "args": {
+          "query": "replay 校验"
+        }
+      }
+    }
+  ],
+  "x-status-transitions": {
+    "created": [
+      "cancelled",
+      "running",
+      "waiting_approval"
+    ],
+    "running": [
+      "cancelled",
+      "degraded",
+      "failed",
+      "outcome_unknown",
+      "paused",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "waiting_approval": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "paused": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "degraded": [
+      "cancelled",
+      "failed",
+      "outcome_unknown",
+      "running",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "succeeded": [],
+    "failed": [],
+    "cancelled": [],
+    "outcome_unknown": [
+      "cancelled",
+      "failed",
+      "succeeded"
+    ]
+  }
+}

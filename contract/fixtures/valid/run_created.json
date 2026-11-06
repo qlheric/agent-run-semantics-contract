@@ -1,7 +1,7 @@
 {
   "$comment": "created 状态样例：framework=agent_framework、policy.capability_tier=write、retry_profile=read_only、step.side_effect=idempotent、approval=rejected",
   "spec": {
-    "version": "0.1.0",
+    "version": "0.4.0",
     "clock": "wall",
     "framework": "agent_framework"
   },
@@ -17,7 +17,11 @@
         "name": "read_only",
         "max_attempts": 2,
         "backoff_ms": 100,
-        "retryable_tools": ["search", "read_file", "list_dir"]
+        "retryable_tools": [
+          "search",
+          "read_file",
+          "list_dir"
+        ]
       }
     },
     "budget": {
@@ -31,9 +35,8 @@
     "termination": {
       "reason": "completed"
     },
-    "error": {
-      "code": "none"
-    },
+    "error": null,
+    "side_effect_unknown": false,
     "audit": [],
     "tools": [
       {
@@ -41,10 +44,12 @@
         "tier": "read",
         "args_schema": {
           "type": "object",
-          "required": ["path"]
+          "required": [
+            "path"
+          ]
         },
         "side_effect": "none",
-        "idempotency_key_template": "run/{run_id}/step/{step_id}/list_dir",
+        "dedupe_key_template": "run/{run_id}/step/{step_id}/list_dir",
         "result_budget_bytes": 4096
       },
       {
@@ -52,63 +57,100 @@
         "tier": "write",
         "args_schema": {
           "type": "object",
-          "required": ["path", "content"]
+          "required": [
+            "path",
+            "content"
+          ]
         },
         "side_effect": "idempotent",
-        "idempotency_key_template": "run/{run_id}/step/{step_id}/write_file",
+        "dedupe_key_template": "run/{run_id}/step/{step_id}/write_file",
         "result_budget_bytes": 65536
       }
-    ]
+    ],
+    "reservations": []
   },
-  "step": {
-    "step_id": "step_0",
-    "attempt": 1,
-    "side_effect": "idempotent",
-    "idempotency_key": "idem-step-created-003",
-    "idempotency_scope": "run_created_003/step_0/write_file",
-    "approval": {
-      "required": true,
-      "status": "rejected",
-      "by": "operator-a",
-      "at": "2026-11-02T10:05:00Z",
-      "expires_at": "2026-11-02T10:35:00Z"
-    },
-    "args": {
-      "path": "reports/summary.md",
-      "content": "写入内容"
-    },
-    "granted": {
-      "deadline_at_ms": 1793594400000,
-      "deadline_ms": 20000,
-      "clock": "wall",
-      "scope": "run_created_003/step_0/write_file",
-      "quota": {
-        "cost_usd": 50000,
-        "tool_calls": 2,
-        "tokens": 10000
-      }
-    },
-    "grant_request": {
-      "run_id": "run_created_003",
+  "step": [
+    {
       "step_id": "step_0",
       "attempt": 1,
-      "idempotency_scope": "run_created_003/step_0/write_file",
-      "tool": "write_file",
+      "side_effect": "idempotent",
+      "dedupe_scope": "run_created_003/step_0/write_file",
+      "effective_tier": "write",
+      "approval": {
+        "required": true,
+        "status": "rejected",
+        "by": "operator-a",
+        "at": "2026-11-02T10:05:00Z",
+        "expires_at": "2026-11-02T10:35:00Z"
+      },
       "args": {
         "path": "reports/summary.md",
         "content": "写入内容"
+      },
+      "granted": {
+        "deadline_at_ms": 1793594400000,
+        "deadline_ms": 20000,
+        "clock": "wall",
+        "scope": "run_created_003/step_0/write_file",
+        "quota": {
+          "cost_usd": 50000,
+          "tool_calls": 2,
+          "tokens": 10000
+        }
+      },
+      "grant_request": {
+        "run_id": "run_created_003",
+        "step_id": "step_0",
+        "attempt": 1,
+        "dedupe_scope": "run_created_003/step_0/write_file",
+        "tool": "write_file",
+        "args": {
+          "path": "reports/summary.md",
+          "content": "写入内容"
+        }
       }
     }
-  },
+  ],
   "x-status-transitions": {
-    "created": ["running", "cancelled"],
-    "running": ["succeeded", "failed"],
-    "waiting_approval": ["running"],
-    "paused": ["running"],
-    "degraded": ["running"],
+    "created": [
+      "cancelled",
+      "running",
+      "waiting_approval"
+    ],
+    "running": [
+      "cancelled",
+      "degraded",
+      "failed",
+      "outcome_unknown",
+      "paused",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "waiting_approval": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "paused": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "degraded": [
+      "cancelled",
+      "failed",
+      "outcome_unknown",
+      "running",
+      "succeeded",
+      "waiting_approval"
+    ],
     "succeeded": [],
     "failed": [],
     "cancelled": [],
-    "outcome_unknown": ["running"]
+    "outcome_unknown": [
+      "cancelled",
+      "failed",
+      "succeeded"
+    ]
   }
 }

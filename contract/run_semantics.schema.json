@@ -1,22 +1,34 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentrun.invalid/contract/run_semantics/0.1.0/run_semantics.schema.json",
-  "title": "Agent Run 语义契约 v0.1",
-  "description": "M1 Agent Run 控制面语义契约 v0.1.0（单一真源）。本文只定形状，不定实现。",
+  "$id": "https://qlheric.github.io/agent-run-semantics-contract/v0.4.0/run_semantics.schema.json",
+  "title": "Agent Run 语义契约 v0.4.0",
+  "description": "M1 Agent Run 控制面语义契约 v0.4.0（单一真源）。本文只定形状，不定实现。",
   "type": "object",
   "additionalProperties": false,
-  "required": ["spec", "run", "step", "x-status-transitions"],
+  "patternProperties": {
+    "^x-[A-Za-z0-9_.-]+$": { "$ref": "#/$defs/json_value" }
+  },
+  "required": ["spec", "run", "step"],
   "properties": {
     "$comment": {
       "type": "string",
       "description": "fixture 用途说明（可选注解，不参与语义）"
     },
+    "extensions": {
+      "$ref": "#/$defs/extensions",
+      "description": "逃生舱：自由扩展容器（字段名与值都不限；不参与语义、不参与哈希）"
+    },
     "spec": { "$ref": "#/$defs/spec" },
     "run": { "$ref": "#/$defs/run" },
-    "step": { "$ref": "#/$defs/step" },
+    "step": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/step" },
+      "minItems": 1,
+      "description": "run 的步骤序列（v0.3 起是数组；v0.2 的单对象形状已废弃）"
+    },
     "x-status-transitions": {
       "$ref": "#/$defs/status_transitions",
-      "description": "契约级状态转移表（文档根元数据，不随每份 run 快照重复下发）"
+      "description": "契约级状态转移表（文档根元数据，不随每份 run 快照重复下发）。**可省略**：唯一权威是 contract/status-transitions.json；若带则必须与权威表逐状态逐目标相等（纪律④）"
     }
   },
   "$defs": {
@@ -26,8 +38,9 @@
       "required": ["version", "clock", "framework"],
       "properties": {
         "version": {
-          "const": "0.1.0",
-          "description": "契约版本；版本变了还是同一契约（ID 永不重命名）"
+          "type": "string",
+          "enum": ["0.2.0", "0.3.0", "0.4.0"],
+          "description": "契约版本；版本变了还是同一契约（ID 永不重命名）。v0.3 起改为**版本集合**（不再 const），新增版本只改这一处"
         },
         "clock": {
           "$ref": "#/$defs/clock",
@@ -35,8 +48,8 @@
         },
         "framework": {
           "type": "string",
-          "enum": ["langgraph", "agent_framework", "custom"],
-          "description": "执行面框架标识（只做形状，不做优劣评价）"
+          "minLength": 1,
+          "description": "执行面框架标识（**自由字符串**，不设枚举：框架清单会变，枚举会把消费方钉死；只做形状，不做优劣评价）"
         }
       }
     },
@@ -57,8 +70,10 @@
         "budget",
         "termination",
         "error",
+        "side_effect_unknown",
         "audit",
-        "tools"
+        "tools",
+        "reservations"
       ],
       "properties": {
         "run_id": { "type": "string", "minLength": 1 },
@@ -84,12 +99,22 @@
         "idempotency_key": {
           "type": "string",
           "minLength": 1,
-          "description": "run 级幂等键（字段 5/语义 1）：同键重放 ⇒ 同一 run"
+          "description": "run 级**业务幂等键**（语义 1）：同键重放 ⇒ 同一 run。映射 IETF Idempotency-Key（消费方可把它放进 HTTP 头）。幂等键优先级：run.idempotency_key > step.dedupe_scope > tools[].dedupe_key_template"
         },
         "policy": { "$ref": "#/$defs/policy" },
         "budget": { "$ref": "#/$defs/budget" },
         "termination": { "$ref": "#/$defs/termination" },
-        "error": { "$ref": "#/$defs/error" },
+        "error": {
+          "description": "run 级错误；**无错时显式为 null**（不再用 code=\"none\" 哨兵）",
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/error" }
+          ]
+        },
+        "side_effect_unknown": {
+          "type": "boolean",
+          "description": "副作用是否处于**未知**状态（outcome_unknown 的读侧事实）：status=outcome_unknown ⇔ side_effect_unknown=true；其余状态恒为 false"
+        },
         "audit": {
           "type": "array",
           "items": { "$ref": "#/$defs/audit_entry" },
@@ -99,6 +124,60 @@
           "type": "array",
           "items": { "$ref": "#/$defs/tool_entry" },
           "description": "按档过滤后下发的工具目录（字段 10）"
+        },
+        "reservations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/reservation" },
+          "description": "预算预留/结算条目（语义 4）：reserve → settle 两段扣费的结构化留痕；可为空数组"
+        }
+      }
+    },
+    "reservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "step_id",
+        "attempt",
+        "amount_micro",
+        "price_snapshot_id",
+        "state",
+        "settled_micro",
+        "refund_micro"
+      ],
+      "description": "预算预留条目（语义 4 / reserve → settle）：先按 amount_micro 预扣，结算时写 settled_micro（实际用量）与 refund_micro（差额退回）。金额一律整数 micro-USD，禁浮点",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "预留 ID；**同一 step 的重试复用同一个 id**（不二次预扣）"
+        },
+        "step_id": { "type": "string", "minLength": 1 },
+        "attempt": { "type": "integer", "minimum": 1 },
+        "amount_micro": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "预扣金额（micro-USD，整数）"
+        },
+        "price_snapshot_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "价格快照 ID；**在预留生命周期内冻结**（结算不得换快照）"
+        },
+        "state": {
+          "type": "string",
+          "enum": ["held", "settled", "released", "expired"],
+          "description": "预留状态：held=持有中；settled=已结算；released=主动释放；expired=失效（必须 release 并留审计）"
+        },
+        "settled_micro": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "实际结算金额（micro-USD）；未结算时为 null"
+        },
+        "refund_micro": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "退回金额（micro-USD）；未结算时为 null"
         }
       }
     },
@@ -155,7 +234,7 @@
         "capability_tier": {
           "type": "string",
           "enum": ["read", "write", "destructive"],
-          "description": "权限档（语义 5），能力上限；工具级 `tools[].tier` 仍独立"
+          "description": "权限档（语义 5），能力上限；工具级 `tools[].tier` 仍独立。冲突裁决：effective_tier = min(policy.capability_tier, tool.tier)（顺序 read<write<destructive）"
         },
         "max_attempts": {
           "type": "integer",
@@ -196,11 +275,15 @@
         "currency",
         "price_snapshot_id"
       ],
-      "description": "四项配额（字段 6/16）+ 已用量；金额一律整数 micro-USD，禁浮点",
+      "description": "四项配额（字段 6/16）+ 已用量；金额一律整数 micro-USD，禁浮点。max_tokens 只是 token 总量粗护栏，**不证明金额**（金额以 max_cost_usd 为准）",
       "properties": {
         "max_steps": { "type": "integer", "minimum": 0 },
         "max_tool_calls": { "type": "integer", "minimum": 0 },
-        "max_tokens": { "type": "integer", "minimum": 0 },
+        "max_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "token 总量粗护栏（仅数量维度，不证明金额）"
+        },
         "max_cost_usd": {
           "type": "integer",
           "minimum": 0,
@@ -214,7 +297,16 @@
         },
         "used_steps": { "type": "integer", "minimum": 0 },
         "used_tool_calls": { "type": "integer", "minimum": 0 },
-        "used_tokens": { "type": "integer", "minimum": 0 },
+        "used_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "token 总量（粗护栏口径）"
+        },
+        "used_tokens_input": { "type": "integer", "minimum": 0 },
+        "used_tokens_output": { "type": "integer", "minimum": 0 },
+        "used_tokens_cache_read": { "type": "integer", "minimum": 0 },
+        "used_tokens_cache_write": { "type": "integer", "minimum": 0 },
+        "used_tokens_reasoning": { "type": "integer", "minimum": 0 },
         "used_cost_usd": { "type": "integer", "minimum": 0 }
       }
     },
@@ -242,11 +334,11 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["code"],
+      "description": "run 级错误详情；无错时整个字段为 null（不用 code=\"none\" 哨兵）",
       "properties": {
         "code": {
           "type": "string",
           "enum": [
-            "none",
             "tool_failed",
             "budget_exhausted",
             "deadline_exceeded",
@@ -263,7 +355,7 @@
       "additionalProperties": false,
       "required": [
         "seq",
-        "ts",
+        "ts_ms",
         "type",
         "run_id",
         "step_id",
@@ -274,26 +366,146 @@
       ],
       "properties": {
         "seq": { "type": "integer", "minimum": 0 },
-        "ts": { "type": "string", "minLength": 1 },
-        "type": { "type": "string", "minLength": 1 },
+        "ts_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "事件时间（epoch 毫秒整数）。**参与哈希**（公式里用 str(ts_ms)）"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "run_created",
+            "run_started",
+            "run_finished",
+            "approval_decision",
+            "audit_gap",
+            "side_effect_unknown",
+            "tool_call",
+            "tool_call_denied",
+            "degraded",
+            "step_started",
+            "step_outcome_unknown",
+            "state_transition"
+          ],
+          "description": "审计事件类型（**枚举只增不删**）。**v0.4 新增 `state_transition`**：状态转移留痕 —— 其 payload 必须是 $defs/state_transition_payload（见下方 allOf 约束）"
+        },
         "run_id": { "type": "string", "minLength": 1 },
         "step_id": { "type": "string", "minLength": 1 },
         "attempt": { "type": "integer", "minimum": 1 },
         "payload": { "$ref": "#/$defs/audit_payload" },
-        "prev_hash": { "type": "string" },
-        "hash": { "type": "string", "minLength": 1 }
-      }
+        "prev_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["type"],
+            "properties": { "type": { "const": "state_transition" } }
+          },
+          "then": {
+            "properties": { "payload": { "$ref": "#/$defs/state_transition_payload" } }
+          }
+        }
+      ]
     },
     "audit_payload": {
       "type": "object",
       "additionalProperties": false,
-      "description": "审计载荷：结构化固定字段，未知信息走 run/step 的其他字段",
+      "description": "审计载荷：结构化固定字段 + 可选的 extra 逃生舱（未知信息走 run/step 的其他字段）。**v0.4**：`type=state_transition` 时载荷必须是 $defs/state_transition_payload（from/to/actor/cause + 可选 evidence_ref）",
       "properties": {
         "tool": { "type": "string" },
         "args_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
         "result": { "type": "string" },
         "reason": { "type": "string" },
-        "amount_usd": { "type": "integer", "minimum": 0 }
+        "amount_usd": { "type": "integer", "minimum": 0 },
+        "from": {
+          "type": "string",
+          "enum": [
+            "created",
+            "running",
+            "waiting_approval",
+            "paused",
+            "degraded",
+            "succeeded",
+            "failed",
+            "cancelled",
+            "outcome_unknown"
+          ],
+          "description": "**仅 state_transition**：转移的源状态（v0.4）"
+        },
+        "to": {
+          "type": "string",
+          "enum": [
+            "created",
+            "running",
+            "waiting_approval",
+            "paused",
+            "degraded",
+            "succeeded",
+            "failed",
+            "cancelled",
+            "outcome_unknown"
+          ],
+          "description": "**仅 state_transition**：转移的目标状态（v0.4）"
+        },
+        "actor": {
+          "type": "string",
+          "enum": ["control_plane", "executor", "human", "policy"],
+          "description": "**仅 state_transition**：发起本次转移的主体（v0.4）"
+        },
+        "cause": {
+          "type": "string",
+          "minLength": 1,
+          "description": "**仅 state_transition**：本次转移的原因（人可读，v0.4）"
+        },
+        "evidence_ref": {
+          "type": "string",
+          "minLength": 1,
+          "description": "**仅 state_transition**：外部对账证据引用（v0.4）。`from=outcome_unknown` 时**必填**（无证据不得离开未知态 ⇒ --replay 判红，路径 /run/audit/<i>/payload/evidence_ref）"
+        },
+        "extra": { "$ref": "#/$defs/extensions" }
+      }
+    },
+    "state_transition_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to", "actor", "cause"],
+      "description": "**v0.4**：`audit_entry.type == \"state_transition\"` 时 payload 必须是这个形状（from/to/actor/cause 四字段必填；evidence_ref 在 from=outcome_unknown 时必填，由 --replay 判据强制）",
+      "properties": {
+        "from": {
+          "type": "string",
+          "enum": [
+            "created",
+            "running",
+            "waiting_approval",
+            "paused",
+            "degraded",
+            "succeeded",
+            "failed",
+            "cancelled",
+            "outcome_unknown"
+          ]
+        },
+        "to": {
+          "type": "string",
+          "enum": [
+            "created",
+            "running",
+            "waiting_approval",
+            "paused",
+            "degraded",
+            "succeeded",
+            "failed",
+            "cancelled",
+            "outcome_unknown"
+          ]
+        },
+        "actor": {
+          "type": "string",
+          "enum": ["control_plane", "executor", "human", "policy"]
+        },
+        "cause": { "type": "string", "minLength": 1 },
+        "evidence_ref": { "type": "string", "minLength": 1 }
       }
     },
     "tool_entry": {
@@ -304,7 +516,7 @@
         "tier",
         "args_schema",
         "side_effect",
-        "idempotency_key_template",
+        "dedupe_key_template",
         "result_budget_bytes"
       ],
       "description": "工具目录条目（字段 10）：按权限档过滤后才下发",
@@ -317,7 +529,10 @@
         },
         "args_schema": { "$ref": "#/$defs/args_schema" },
         "side_effect": { "$ref": "#/$defs/side_effect" },
-        "idempotency_key_template": { "type": "string" },
+        "dedupe_key_template": {
+          "type": "string",
+          "description": "工具级去重键模板（改名自 idempotency_key_template；幂等收敛 4→2 后只剩这一个模板）"
+        },
         "result_budget_bytes": { "type": "integer", "minimum": 0 }
       }
     },
@@ -389,26 +604,32 @@
     "grant_request": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["run_id", "step_id", "attempt", "idempotency_scope", "tool"],
+      "required": ["run_id", "step_id", "attempt", "dedupe_scope", "tool"],
       "description": "request_grant 入参契约（字段 18）：调用工具之前提交，控制面算 args_digest 并随 grant 回传",
       "properties": {
         "run_id": { "type": "string", "minLength": 1 },
         "step_id": { "type": "string", "minLength": 1 },
         "attempt": { "type": "integer", "minimum": 1 },
-        "idempotency_scope": {
+        "dedupe_scope": {
           "type": ["string", "null"],
-          "description": "允许 null：scope 未分配时按 run_id/step_id/tool 派生"
+          "description": "控制面分配的去重范围（改名自 idempotency_scope）；允许 null：scope 未分配时按 run_id/step_id/tool 派生"
         },
         "tool": { "type": "string", "minLength": 1 },
         "args": { "$ref": "#/$defs/json_value" },
         "args_ref": { "type": "string" }
       }
     },
+    "extensions": {
+      "type": "object",
+      "x-free-form": true,
+      "additionalProperties": { "$ref": "#/$defs/json_value" },
+      "description": "逃生舱容器：字段名与值都不限（顶层 extensions 与各 payload 的 extra）"
+    },
     "json_value": {
-      "description": "args 只允许 string/integer/boolean/null/array/object，禁浮点（算法见 README §args_digest）",
+      "description": "args 只允许 string/number/boolean/null/array/object（v0.3 起**放开浮点**：LLM 参数如 temperature=0.7 必须能表达；金额类字段仍禁浮点，见 README §3）",
       "anyOf": [
         { "type": "string" },
-        { "type": "integer" },
+        { "type": "number" },
         { "type": "boolean" },
         { "type": "null" },
         { "type": "array", "items": { "$ref": "#/$defs/json_value" } },
@@ -426,7 +647,8 @@
         "step_id",
         "attempt",
         "side_effect",
-        "idempotency_key",
+        "dedupe_scope",
+        "effective_tier",
         "approval",
         "granted",
         "grant_request"
@@ -439,14 +661,14 @@
           "description": "第几次尝试（字段 3）"
         },
         "side_effect": { "$ref": "#/$defs/side_effect" },
-        "idempotency_key": {
-          "type": "string",
-          "minLength": 1,
-          "description": "业务侧幂等键（字段 14）；与控制面内部去重的 idempotency_scope 是两个东西"
-        },
-        "idempotency_scope": {
+        "dedupe_scope": {
           "type": ["string", "null"],
-          "description": "控制面分配的幂等范围（字段 5）；允许 null"
+          "description": "控制面分配的去重范围（改名自 idempotency_scope，字段 5）；允许 null。与 run.idempotency_key（业务键）是两个东西"
+        },
+        "effective_tier": {
+          "type": "string",
+          "enum": ["read", "write", "destructive"],
+          "description": "本 step 的生效权限档（语义 5 冲突裁决）：必须等于 min(policy.capability_tier, tool.tier)，顺序 read<write<destructive"
         },
         "approval": { "$ref": "#/$defs/approval" },
         "args": { "$ref": "#/$defs/json_value" },

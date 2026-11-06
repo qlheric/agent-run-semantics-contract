@@ -1,7 +1,7 @@
 {
   "$comment": "failed 状态样例：工具报错终止，termination.reason=tool_error，error.code=tool_failed",
   "spec": {
-    "version": "0.1.0",
+    "version": "0.4.0",
     "clock": "wall",
     "framework": "agent_framework"
   },
@@ -17,7 +17,9 @@
         "name": "read_only",
         "max_attempts": 3,
         "backoff_ms": 300,
-        "retryable_tools": ["search"]
+        "retryable_tools": [
+          "search"
+        ]
       }
     },
     "budget": {
@@ -40,6 +42,7 @@
       "code": "tool_failed",
       "message": "search 返回 503"
     },
+    "side_effect_unknown": false,
     "audit": [],
     "tools": [
       {
@@ -49,53 +52,87 @@
           "type": "object"
         },
         "side_effect": "none",
-        "idempotency_key_template": "run/{run_id}/step/{step_id}/search",
+        "dedupe_key_template": "run/{run_id}/step/{step_id}/search",
         "result_budget_bytes": 8192
       }
-    ]
+    ],
+    "reservations": []
   },
-  "step": {
-    "step_id": "step_0",
-    "attempt": 3,
-    "side_effect": "none",
-    "idempotency_key": "idem-step-failed-007",
-    "idempotency_scope": "run_failed_007/step_0/search",
-    "approval": {
-      "required": false,
-      "status": "approved",
-      "by": "system"
-    },
-    "args": {
-      "query": "会失败的检索",
-      "retry": true
-    },
-    "granted": {
-      "deadline_at_ms": 1793594400000,
-      "deadline_ms": 12000,
-      "clock": "wall",
-      "scope": "run_failed_007/step_0/search"
-    },
-    "grant_request": {
-      "run_id": "run_failed_007",
+  "step": [
+    {
       "step_id": "step_0",
       "attempt": 3,
-      "idempotency_scope": "run_failed_007/step_0/search",
-      "tool": "search",
+      "side_effect": "none",
+      "dedupe_scope": "run_failed_007/step_0/search",
+      "effective_tier": "read",
+      "approval": {
+        "required": false,
+        "status": "approved",
+        "by": "system"
+      },
       "args": {
         "query": "会失败的检索",
         "retry": true
+      },
+      "granted": {
+        "deadline_at_ms": 1793594400000,
+        "deadline_ms": 12000,
+        "clock": "wall",
+        "scope": "run_failed_007/step_0/search"
+      },
+      "grant_request": {
+        "run_id": "run_failed_007",
+        "step_id": "step_0",
+        "attempt": 3,
+        "dedupe_scope": "run_failed_007/step_0/search",
+        "tool": "search",
+        "args": {
+          "query": "会失败的检索",
+          "retry": true
+        }
       }
     }
-  },
+  ],
   "x-status-transitions": {
-    "created": ["running"],
-    "running": ["failed", "cancelled"],
-    "waiting_approval": ["running"],
-    "paused": ["running"],
-    "degraded": ["running", "failed"],
+    "created": [
+      "cancelled",
+      "running",
+      "waiting_approval"
+    ],
+    "running": [
+      "cancelled",
+      "degraded",
+      "failed",
+      "outcome_unknown",
+      "paused",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "waiting_approval": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "paused": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "degraded": [
+      "cancelled",
+      "failed",
+      "outcome_unknown",
+      "running",
+      "succeeded",
+      "waiting_approval"
+    ],
     "succeeded": [],
     "failed": [],
     "cancelled": [],
-    "outcome_unknown": ["running"]
+    "outcome_unknown": [
+      "cancelled",
+      "failed",
+      "succeeded"
+    ]
   }
 }

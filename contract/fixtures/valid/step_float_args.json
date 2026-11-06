@@ -1,0 +1,142 @@
+{
+  "$comment": "v0.3 边界样例：args 里带 LLM 浮点参数（temperature=0.7、top_p=0.95）—— v0.3 放开浮点，否则表达不了真实 LLM 参数。digest 对第一个 step 求值",
+  "spec": {
+    "version": "0.4.0",
+    "clock": "wall",
+    "framework": "langgraph"
+  },
+  "run": {
+    "run_id": "run_float_args_011",
+    "status": "running",
+    "clock": "wall",
+    "idempotency_key": "idem-run-float-args-011",
+    "policy": {
+      "capability_tier": "read",
+      "max_attempts": 2,
+      "retry_profile": {
+        "name": "model_only",
+        "max_attempts": 2,
+        "backoff_ms": 100,
+        "retryable_tools": []
+      }
+    },
+    "budget": {
+      "max_steps": 6,
+      "max_tool_calls": 12,
+      "max_tokens": 20000,
+      "max_cost_usd": 500000,
+      "currency": "USD",
+      "price_snapshot_id": "price-2026-11-02"
+    },
+    "termination": {
+      "reason": "completed"
+    },
+    "error": null,
+    "side_effect_unknown": false,
+    "audit": [],
+    "tools": [
+      {
+        "tool": "llm_call",
+        "tier": "read",
+        "args_schema": {
+          "type": "object",
+          "required": [
+            "prompt"
+          ]
+        },
+        "side_effect": "none",
+        "dedupe_key_template": "run/{run_id}/step/{step_id}/llm_call",
+        "result_budget_bytes": 4096
+      }
+    ],
+    "reservations": []
+  },
+  "step": [
+    {
+      "step_id": "step_0",
+      "attempt": 1,
+      "side_effect": "none",
+      "dedupe_scope": "run_float_args_011/step_0/llm_call",
+      "effective_tier": "read",
+      "approval": {
+        "required": false,
+        "status": "approved",
+        "by": "system"
+      },
+      "args": {
+        "prompt": "总结这段契约",
+        "temperature": 0.7,
+        "top_p": 0.95,
+        "max_tokens": 1024,
+        "seed": 42
+      },
+      "granted": {
+        "deadline_at_ms": 1793613600000,
+        "deadline_ms": 10000,
+        "clock": "wall",
+        "scope": "run_float_args_011/step_0/llm_call",
+        "quota": {
+          "cost_usd": 2000,
+          "tool_calls": 1,
+          "tokens": 4096
+        }
+      },
+      "grant_request": {
+        "run_id": "run_float_args_011",
+        "step_id": "step_0",
+        "attempt": 1,
+        "dedupe_scope": "run_float_args_011/step_0/llm_call",
+        "tool": "llm_call",
+        "args": {
+          "prompt": "总结这段契约",
+          "temperature": 0.7,
+          "top_p": 0.95,
+          "max_tokens": 1024,
+          "seed": 42
+        }
+      }
+    }
+  ],
+  "x-status-transitions": {
+    "created": [
+      "cancelled",
+      "running",
+      "waiting_approval"
+    ],
+    "running": [
+      "cancelled",
+      "degraded",
+      "failed",
+      "outcome_unknown",
+      "paused",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "waiting_approval": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "paused": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "degraded": [
+      "cancelled",
+      "failed",
+      "outcome_unknown",
+      "running",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "succeeded": [],
+    "failed": [],
+    "cancelled": [],
+    "outcome_unknown": [
+      "cancelled",
+      "failed",
+      "succeeded"
+    ]
+  }
+}

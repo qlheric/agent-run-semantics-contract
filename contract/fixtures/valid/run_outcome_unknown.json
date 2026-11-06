@@ -1,7 +1,7 @@
 {
   "$comment": "outcome_unknown 状态样例：非幂等副作用失败 ⇒ 结果未知（不是 failed），调用方不得直接重试",
   "spec": {
-    "version": "0.1.0",
+    "version": "0.4.0",
     "clock": "wall",
     "framework": "langgraph"
   },
@@ -17,7 +17,9 @@
         "name": "read_only",
         "max_attempts": 1,
         "backoff_ms": 0,
-        "retryable_tools": ["read_file"]
+        "retryable_tools": [
+          "read_file"
+        ]
       }
     },
     "budget": {
@@ -40,10 +42,11 @@
       "code": "tool_failed",
       "message": "写外部系统时连接中断，副作用是否落库未知"
     },
+    "side_effect_unknown": true,
     "audit": [
       {
         "seq": 0,
-        "ts": "2026-11-02T11:00:00Z",
+        "ts_ms": 1793617200000,
         "type": "step_outcome_unknown",
         "run_id": "run_outcome_unknown_009",
         "step_id": "step_0",
@@ -54,7 +57,7 @@
           "reason": "side_effect_unknown"
         },
         "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-        "hash": "7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7"
+        "hash": "853e4b8092e9f27181c2ef0ea32c52cdf2e9fb4c8a374654e2145becae2f93ab"
       }
     ],
     "tools": [
@@ -63,62 +66,98 @@
         "tier": "destructive",
         "args_schema": {
           "type": "object",
-          "required": ["order_id"]
+          "required": [
+            "order_id"
+          ]
         },
         "side_effect": "non_idempotent",
-        "idempotency_key_template": "run/{run_id}/step/{step_id}/charge_card",
+        "dedupe_key_template": "run/{run_id}/step/{step_id}/charge_card",
         "result_budget_bytes": 1024
       }
-    ]
+    ],
+    "reservations": []
   },
-  "step": {
-    "step_id": "step_0",
-    "attempt": 1,
-    "side_effect": "non_idempotent",
-    "idempotency_key": "idem-step-outcome-unknown-009",
-    "idempotency_scope": "run_outcome_unknown_009/step_0/charge_card",
-    "approval": {
-      "required": true,
-      "status": "approved",
-      "by": "operator-c",
-      "at": "2026-11-02T10:59:00Z"
-    },
-    "args": {
-      "order_id": "ORD-2026-0002",
-      "amount_usd": 2599
-    },
-    "granted": {
-      "deadline_at_ms": 1793594400000,
-      "deadline_ms": 6000,
-      "clock": "wall",
-      "scope": "run_outcome_unknown_009/step_0/charge_card",
-      "quota": {
-        "cost_usd": 100000,
-        "tool_calls": 1,
-        "tokens": 0
-      }
-    },
-    "grant_request": {
-      "run_id": "run_outcome_unknown_009",
+  "step": [
+    {
       "step_id": "step_0",
       "attempt": 1,
-      "idempotency_scope": "run_outcome_unknown_009/step_0/charge_card",
-      "tool": "charge_card",
+      "side_effect": "non_idempotent",
+      "dedupe_scope": "run_outcome_unknown_009/step_0/charge_card",
+      "effective_tier": "destructive",
+      "approval": {
+        "required": true,
+        "status": "approved",
+        "by": "operator-c",
+        "at": "2026-11-02T10:59:00Z"
+      },
       "args": {
         "order_id": "ORD-2026-0002",
         "amount_usd": 2599
+      },
+      "granted": {
+        "deadline_at_ms": 1793594400000,
+        "deadline_ms": 6000,
+        "clock": "wall",
+        "scope": "run_outcome_unknown_009/step_0/charge_card",
+        "quota": {
+          "cost_usd": 100000,
+          "tool_calls": 1,
+          "tokens": 0
+        }
+      },
+      "grant_request": {
+        "run_id": "run_outcome_unknown_009",
+        "step_id": "step_0",
+        "attempt": 1,
+        "dedupe_scope": "run_outcome_unknown_009/step_0/charge_card",
+        "tool": "charge_card",
+        "args": {
+          "order_id": "ORD-2026-0002",
+          "amount_usd": 2599
+        }
       }
     }
-  },
+  ],
   "x-status-transitions": {
-    "created": ["running"],
-    "running": ["outcome_unknown", "failed", "cancelled"],
-    "waiting_approval": ["running"],
-    "paused": ["running"],
-    "degraded": ["running"],
+    "created": [
+      "cancelled",
+      "running",
+      "waiting_approval"
+    ],
+    "running": [
+      "cancelled",
+      "degraded",
+      "failed",
+      "outcome_unknown",
+      "paused",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "waiting_approval": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "paused": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "degraded": [
+      "cancelled",
+      "failed",
+      "outcome_unknown",
+      "running",
+      "succeeded",
+      "waiting_approval"
+    ],
     "succeeded": [],
     "failed": [],
     "cancelled": [],
-    "outcome_unknown": ["running", "failed"]
+    "outcome_unknown": [
+      "cancelled",
+      "failed",
+      "succeeded"
+    ]
   }
 }

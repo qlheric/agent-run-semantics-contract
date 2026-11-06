@@ -1,7 +1,7 @@
 {
   "$comment": "边界样例：大参数走 args_ref（无 step.args），digest 只对引用字符串做",
   "spec": {
-    "version": "0.1.0",
+    "version": "0.4.0",
     "clock": "monotonic",
     "framework": "custom"
   },
@@ -31,9 +31,8 @@
     "termination": {
       "reason": "completed"
     },
-    "error": {
-      "code": "none"
-    },
+    "error": null,
+    "side_effect_unknown": false,
     "audit": [],
     "tools": [
       {
@@ -43,45 +42,79 @@
           "type": "object"
         },
         "side_effect": "none",
-        "idempotency_key_template": "run/{run_id}/step/{step_id}/read_file",
+        "dedupe_key_template": "run/{run_id}/step/{step_id}/read_file",
         "result_budget_bytes": 1024
       }
-    ]
+    ],
+    "reservations": []
   },
-  "step": {
-    "step_id": "step_0",
-    "attempt": 1,
-    "side_effect": "none",
-    "idempotency_key": "idem-step-args-ref-002",
-    "idempotency_scope": null,
-    "approval": {
-      "required": false,
-      "status": "pending"
-    },
-    "args_ref": "objstore://m1/run_args_ref_002/step_0/args.json",
-    "granted": {
-      "deadline_at_ms": 1793594400000,
-      "deadline_ms": 15000,
-      "clock": "monotonic"
-    },
-    "grant_request": {
-      "run_id": "run_args_ref_002",
+  "step": [
+    {
       "step_id": "step_0",
       "attempt": 1,
-      "idempotency_scope": null,
-      "tool": "read_file",
-      "args_ref": "objstore://m1/run_args_ref_002/step_0/args.json"
+      "side_effect": "none",
+      "dedupe_scope": null,
+      "effective_tier": "read",
+      "approval": {
+        "required": false,
+        "status": "pending"
+      },
+      "args_ref": "objstore://m1/run_args_ref_002/step_0/args.json",
+      "granted": {
+        "deadline_at_ms": 1793594400000,
+        "deadline_ms": 15000,
+        "clock": "monotonic"
+      },
+      "grant_request": {
+        "run_id": "run_args_ref_002",
+        "step_id": "step_0",
+        "attempt": 1,
+        "dedupe_scope": null,
+        "tool": "read_file",
+        "args_ref": "objstore://m1/run_args_ref_002/step_0/args.json"
+      }
     }
-  },
+  ],
   "x-status-transitions": {
-    "created": ["running"],
-    "running": ["paused", "succeeded", "failed"],
-    "waiting_approval": ["running"],
-    "paused": ["running"],
-    "degraded": ["running"],
+    "created": [
+      "cancelled",
+      "running",
+      "waiting_approval"
+    ],
+    "running": [
+      "cancelled",
+      "degraded",
+      "failed",
+      "outcome_unknown",
+      "paused",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "waiting_approval": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "paused": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "degraded": [
+      "cancelled",
+      "failed",
+      "outcome_unknown",
+      "running",
+      "succeeded",
+      "waiting_approval"
+    ],
     "succeeded": [],
     "failed": [],
     "cancelled": [],
-    "outcome_unknown": ["running"]
+    "outcome_unknown": [
+      "cancelled",
+      "failed",
+      "succeeded"
+    ]
   }
 }

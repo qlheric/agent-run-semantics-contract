@@ -1,0 +1,127 @@
+{
+  "$comment": "负例⑨：权限档越权 —— policy.capability_tier=read，工具 tier=destructive，却把 effective_tier 写成 destructive ⇒ 期望拒绝路径 /step/0/effective_tier（由权限档裁决拒绝，不是 schema 拒绝）",
+  "spec": {
+    "version": "0.4.0",
+    "clock": "wall",
+    "framework": "langgraph"
+  },
+  "run": {
+    "run_id": "run_invalid_tier_009",
+    "status": "running",
+    "clock": "wall",
+    "idempotency_key": "idem-invalid-tier-009",
+    "policy": {
+      "capability_tier": "read",
+      "max_attempts": 1,
+      "retry_profile": {
+        "name": "model_only",
+        "max_attempts": 1,
+        "backoff_ms": 0,
+        "retryable_tools": []
+      }
+    },
+    "budget": {
+      "max_steps": 10,
+      "max_tool_calls": 20,
+      "max_tokens": 30000,
+      "max_cost_usd": 1000000,
+      "currency": "USD",
+      "price_snapshot_id": "price-2026-11-01"
+    },
+    "termination": {
+      "reason": "completed"
+    },
+    "error": null,
+    "side_effect_unknown": false,
+    "audit": [],
+    "tools": [
+      {
+        "tool": "charge_card",
+        "tier": "destructive",
+        "args_schema": {
+          "type": "object",
+          "required": [
+            "order_id"
+          ]
+        },
+        "side_effect": "non_idempotent",
+        "dedupe_key_template": "run/{run_id}/step/{step_id}/charge_card",
+        "result_budget_bytes": 1024
+      }
+    ],
+    "reservations": []
+  },
+  "step": [
+    {
+      "step_id": "step_0",
+      "attempt": 1,
+      "side_effect": "non_idempotent",
+      "dedupe_scope": "run_invalid_tier_009/step_0/charge_card",
+      "effective_tier": "destructive",
+      "approval": {
+        "required": false,
+        "status": "approved"
+      },
+      "args": {
+        "order_id": "ORD-2026-0009"
+      },
+      "granted": {
+        "deadline_at_ms": 1793613600000,
+        "deadline_ms": 5000,
+        "clock": "wall"
+      },
+      "grant_request": {
+        "run_id": "run_invalid_tier_009",
+        "step_id": "step_0",
+        "attempt": 1,
+        "dedupe_scope": "run_invalid_tier_009/step_0/charge_card",
+        "tool": "charge_card",
+        "args": {
+          "order_id": "ORD-2026-0009"
+        }
+      }
+    }
+  ],
+  "x-status-transitions": {
+    "created": [
+      "cancelled",
+      "running",
+      "waiting_approval"
+    ],
+    "running": [
+      "cancelled",
+      "degraded",
+      "failed",
+      "outcome_unknown",
+      "paused",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "waiting_approval": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "paused": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "degraded": [
+      "cancelled",
+      "failed",
+      "outcome_unknown",
+      "running",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "succeeded": [],
+    "failed": [],
+    "cancelled": [],
+    "outcome_unknown": [
+      "cancelled",
+      "failed",
+      "succeeded"
+    ]
+  }
+}

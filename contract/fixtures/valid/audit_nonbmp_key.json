@@ -1,0 +1,145 @@
+{
+  "$comment": "v0.3 非 BMP 键名样例（纪律⑤ 的 JCS 键序 = UTF-16 码元序）：payload 里放一对**会分叉**的键名 —— 非 BMP 字符 U+1D54A（𝕊，UTF-16 是代理对 D835 DD4A）与 BMP 高位字符 U+E000。按码元序 𝕊 在前，按码位序 U+E000 在前 ⇒ 两种实现算出的 hash 不同。本 fixture 的 hash 即「Python 侧已按码元序实现」的证据。",
+  "spec": {
+    "version": "0.4.0",
+    "clock": "wall",
+    "framework": "langgraph"
+  },
+  "run": {
+    "run_id": "run_nonbmp_key_012",
+    "status": "running",
+    "clock": "wall",
+    "idempotency_key": "idem-run-nonbmp-key-012",
+    "policy": {
+      "capability_tier": "read",
+      "max_attempts": 1,
+      "retry_profile": {
+        "name": "model_only",
+        "max_attempts": 1,
+        "backoff_ms": 0,
+        "retryable_tools": []
+      }
+    },
+    "budget": {
+      "max_steps": 4,
+      "max_tool_calls": 8,
+      "max_tokens": 12000,
+      "max_cost_usd": 300000,
+      "currency": "USD",
+      "price_snapshot_id": "price-2026-11-02"
+    },
+    "termination": {
+      "reason": "completed"
+    },
+    "error": null,
+    "side_effect_unknown": false,
+    "audit": [
+      {
+        "seq": 0,
+        "ts_ms": 1793617200000,
+        "type": "step_started",
+        "run_id": "run_nonbmp_key_012",
+        "step_id": "step_0",
+        "attempt": 1,
+        "payload": {
+          "reason": "non-bmp key ordering probe",
+          "tool": "search",
+          "extra": {
+            "𝕊": null,
+            "": null
+          }
+        },
+        "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "hash": "7dd837d105198536f935c55de230e797cbbaf9b004442e2b10b5a07c7d1bc3bb"
+      }
+    ],
+    "tools": [
+      {
+        "tool": "search",
+        "tier": "read",
+        "args_schema": {
+          "type": "object"
+        },
+        "side_effect": "none",
+        "dedupe_key_template": "run/{run_id}/step/{step_id}/search",
+        "result_budget_bytes": 4096
+      }
+    ],
+    "reservations": []
+  },
+  "step": [
+    {
+      "step_id": "step_0",
+      "attempt": 1,
+      "side_effect": "none",
+      "dedupe_scope": "run_nonbmp_key_012/step_0/search",
+      "effective_tier": "read",
+      "approval": {
+        "required": false,
+        "status": "approved",
+        "by": "system"
+      },
+      "args": {
+        "query": "非 BMP 键序探针"
+      },
+      "granted": {
+        "deadline_at_ms": 1793617200000,
+        "deadline_ms": 8000,
+        "clock": "wall",
+        "scope": "run_nonbmp_key_012/step_0/search"
+      },
+      "grant_request": {
+        "run_id": "run_nonbmp_key_012",
+        "step_id": "step_0",
+        "attempt": 1,
+        "dedupe_scope": "run_nonbmp_key_012/step_0/search",
+        "tool": "search",
+        "args": {
+          "query": "非 BMP 键序探针"
+        }
+      }
+    }
+  ],
+  "x-status-transitions": {
+    "created": [
+      "cancelled",
+      "running",
+      "waiting_approval"
+    ],
+    "running": [
+      "cancelled",
+      "degraded",
+      "failed",
+      "outcome_unknown",
+      "paused",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "waiting_approval": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "paused": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "degraded": [
+      "cancelled",
+      "failed",
+      "outcome_unknown",
+      "running",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "succeeded": [],
+    "failed": [],
+    "cancelled": [],
+    "outcome_unknown": [
+      "cancelled",
+      "failed",
+      "succeeded"
+    ]
+  }
+}

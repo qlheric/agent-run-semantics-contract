@@ -1,7 +1,7 @@
 {
   "$comment": "succeeded 状态样例：正常收束，termination.reason=completed，error.code=none",
   "spec": {
-    "version": "0.1.0",
+    "version": "0.4.0",
     "clock": "wall",
     "framework": "langgraph"
   },
@@ -17,7 +17,11 @@
         "name": "full",
         "max_attempts": 3,
         "backoff_ms": 1000,
-        "retryable_tools": ["search", "read_file", "write_file"]
+        "retryable_tools": [
+          "search",
+          "read_file",
+          "write_file"
+        ]
       }
     },
     "budget": {
@@ -36,9 +40,8 @@
       "reason": "completed",
       "detail": "全部 step 完成"
     },
-    "error": {
-      "code": "none"
-    },
+    "error": null,
+    "side_effect_unknown": false,
     "audit": [],
     "tools": [
       {
@@ -48,53 +51,87 @@
           "type": "object"
         },
         "side_effect": "none",
-        "idempotency_key_template": "run/{run_id}/step/{step_id}/search",
+        "dedupe_key_template": "run/{run_id}/step/{step_id}/search",
         "result_budget_bytes": 8192
       }
-    ]
+    ],
+    "reservations": []
   },
-  "step": {
-    "step_id": "step_2",
-    "attempt": 1,
-    "side_effect": "none",
-    "idempotency_key": "idem-step-succeeded-006",
-    "idempotency_scope": "run_succeeded_006/step_2/search",
-    "approval": {
-      "required": false,
-      "status": "approved",
-      "by": "system"
-    },
-    "args": {
-      "query": "最终核对",
-      "top_k": 3
-    },
-    "granted": {
-      "deadline_at_ms": 1793594400000,
-      "deadline_ms": 8000,
-      "clock": "wall",
-      "scope": "run_succeeded_006/step_2/search"
-    },
-    "grant_request": {
-      "run_id": "run_succeeded_006",
+  "step": [
+    {
       "step_id": "step_2",
       "attempt": 1,
-      "idempotency_scope": "run_succeeded_006/step_2/search",
-      "tool": "search",
+      "side_effect": "none",
+      "dedupe_scope": "run_succeeded_006/step_2/search",
+      "effective_tier": "read",
+      "approval": {
+        "required": false,
+        "status": "approved",
+        "by": "system"
+      },
       "args": {
         "query": "最终核对",
         "top_k": 3
+      },
+      "granted": {
+        "deadline_at_ms": 1793594400000,
+        "deadline_ms": 8000,
+        "clock": "wall",
+        "scope": "run_succeeded_006/step_2/search"
+      },
+      "grant_request": {
+        "run_id": "run_succeeded_006",
+        "step_id": "step_2",
+        "attempt": 1,
+        "dedupe_scope": "run_succeeded_006/step_2/search",
+        "tool": "search",
+        "args": {
+          "query": "最终核对",
+          "top_k": 3
+        }
       }
     }
-  },
+  ],
   "x-status-transitions": {
-    "created": ["running"],
-    "running": ["succeeded", "failed", "cancelled"],
-    "waiting_approval": ["running"],
-    "paused": ["running"],
-    "degraded": ["running", "succeeded"],
+    "created": [
+      "cancelled",
+      "running",
+      "waiting_approval"
+    ],
+    "running": [
+      "cancelled",
+      "degraded",
+      "failed",
+      "outcome_unknown",
+      "paused",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "waiting_approval": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "paused": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "degraded": [
+      "cancelled",
+      "failed",
+      "outcome_unknown",
+      "running",
+      "succeeded",
+      "waiting_approval"
+    ],
     "succeeded": [],
     "failed": [],
     "cancelled": [],
-    "outcome_unknown": ["running"]
+    "outcome_unknown": [
+      "cancelled",
+      "failed",
+      "succeeded"
+    ]
   }
 }

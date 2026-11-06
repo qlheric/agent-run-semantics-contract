@@ -1,0 +1,226 @@
+{
+  "$comment": "v0.3 多步样例：step 是**数组**（2 个 step）；含 reservations（reserve→settle 结构化留痕，一条 settled 一条 released）；args 里带 LLM 浮点参数 temperature=0.7（v0.3 放开浮点）；effective_tier 被工具档压低（policy=write，tool=destructive ⇒ effective=write）",
+  "spec": {
+    "version": "0.4.0",
+    "clock": "wall",
+    "framework": "langgraph"
+  },
+  "run": {
+    "run_id": "run_multi_step_010",
+    "status": "running",
+    "clock": "wall",
+    "idempotency_key": "idem-run-multi-step-010",
+    "policy": {
+      "capability_tier": "write",
+      "max_attempts": 3,
+      "retry_profile": {
+        "name": "full",
+        "max_attempts": 3,
+        "backoff_ms": 500,
+        "retryable_tools": [
+          "search",
+          "read_file"
+        ]
+      }
+    },
+    "budget": {
+      "max_steps": 20,
+      "max_tool_calls": 50,
+      "max_tokens": 100000,
+      "max_cost_usd": 5000000,
+      "currency": "USD",
+      "price_snapshot_id": "price-2026-11-02",
+      "used_steps": 2,
+      "used_tool_calls": 4,
+      "used_tokens": 8400,
+      "used_tokens_input": 3000,
+      "used_tokens_output": 1200,
+      "used_tokens_cache_read": 4000,
+      "used_tokens_cache_write": 200,
+      "used_tokens_reasoning": 0,
+      "used_cost_usd": 4200
+    },
+    "termination": {
+      "reason": "completed",
+      "detail": "两个 step 都跑完"
+    },
+    "error": null,
+    "side_effect_unknown": false,
+    "audit": [],
+    "tools": [
+      {
+        "tool": "search",
+        "tier": "read",
+        "args_schema": {
+          "type": "object",
+          "required": [
+            "query"
+          ]
+        },
+        "side_effect": "none",
+        "dedupe_key_template": "run/{run_id}/step/{step_id}/search",
+        "result_budget_bytes": 8192
+      },
+      {
+        "tool": "charge_card",
+        "tier": "destructive",
+        "args_schema": {
+          "type": "object",
+          "required": [
+            "order_id"
+          ]
+        },
+        "side_effect": "non_idempotent",
+        "dedupe_key_template": "run/{run_id}/step/{step_id}/charge_card",
+        "result_budget_bytes": 1024
+      }
+    ],
+    "reservations": [
+      {
+        "id": "resv_multi_step_010_s1",
+        "step_id": "step_1",
+        "attempt": 1,
+        "amount_micro": 5000,
+        "price_snapshot_id": "price-2026-11-02",
+        "state": "settled",
+        "settled_micro": 4200,
+        "refund_micro": 800
+      },
+      {
+        "id": "resv_multi_step_010_s2",
+        "step_id": "step_2",
+        "attempt": 1,
+        "amount_micro": 2000,
+        "price_snapshot_id": "price-2026-11-02",
+        "state": "released",
+        "settled_micro": null,
+        "refund_micro": null
+      }
+    ]
+  },
+  "step": [
+    {
+      "step_id": "step_1",
+      "attempt": 1,
+      "side_effect": "none",
+      "dedupe_scope": "run_multi_step_010/step_1/search",
+      "effective_tier": "read",
+      "approval": {
+        "required": false,
+        "status": "approved",
+        "by": "system"
+      },
+      "args": {
+        "query": "第一段检索",
+        "top_k": 5
+      },
+      "granted": {
+        "deadline_at_ms": 1793613600000,
+        "deadline_ms": 30000,
+        "clock": "wall",
+        "scope": "run_multi_step_010/step_1/search",
+        "quota": {
+          "cost_usd": 10000,
+          "tool_calls": 5,
+          "tokens": 20000
+        }
+      },
+      "grant_request": {
+        "run_id": "run_multi_step_010",
+        "step_id": "step_1",
+        "attempt": 1,
+        "dedupe_scope": "run_multi_step_010/step_1/search",
+        "tool": "search",
+        "args": {
+          "query": "第一段检索",
+          "top_k": 5
+        }
+      }
+    },
+    {
+      "step_id": "step_2",
+      "attempt": 1,
+      "side_effect": "non_idempotent",
+      "dedupe_scope": "run_multi_step_010/step_2/charge_card",
+      "effective_tier": "write",
+      "approval": {
+        "required": true,
+        "status": "approved",
+        "by": "operator-a",
+        "at": "2026-11-02T10:00:00Z"
+      },
+      "args": {
+        "order_id": "ORD-2026-0010",
+        "amount_usd": 4200,
+        "temperature": 0.7,
+        "top_p": 0.95
+      },
+      "granted": {
+        "deadline_at_ms": 1793613600000,
+        "deadline_ms": 15000,
+        "clock": "wall",
+        "scope": "run_multi_step_010/step_2/charge_card",
+        "quota": {
+          "cost_usd": 5000,
+          "tool_calls": 1,
+          "tokens": 8000
+        }
+      },
+      "grant_request": {
+        "run_id": "run_multi_step_010",
+        "step_id": "step_2",
+        "attempt": 1,
+        "dedupe_scope": "run_multi_step_010/step_2/charge_card",
+        "tool": "charge_card",
+        "args": {
+          "order_id": "ORD-2026-0010",
+          "amount_usd": 4200,
+          "temperature": 0.7,
+          "top_p": 0.95
+        }
+      }
+    }
+  ],
+  "x-status-transitions": {
+    "created": [
+      "cancelled",
+      "running",
+      "waiting_approval"
+    ],
+    "running": [
+      "cancelled",
+      "degraded",
+      "failed",
+      "outcome_unknown",
+      "paused",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "waiting_approval": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "paused": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "degraded": [
+      "cancelled",
+      "failed",
+      "outcome_unknown",
+      "running",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "succeeded": [],
+    "failed": [],
+    "cancelled": [],
+    "outcome_unknown": [
+      "cancelled",
+      "failed",
+      "succeeded"
+    ]
+  }
+}

@@ -1,7 +1,7 @@
 {
   "$comment": "基准样例：run 处于 running，四项预算全填满，step 带完整 args（中文参数，用于 digest 逐字节比对）",
   "spec": {
-    "version": "0.1.0",
+    "version": "0.4.0",
     "clock": "wall",
     "framework": "langgraph"
   },
@@ -17,7 +17,10 @@
         "name": "full",
         "max_attempts": 3,
         "backoff_ms": 500,
-        "retryable_tools": ["search", "read_file"]
+        "retryable_tools": [
+          "search",
+          "read_file"
+        ]
       }
     },
     "budget": {
@@ -36,14 +39,12 @@
       "reason": "completed",
       "detail": "run 正常收束"
     },
-    "error": {
-      "code": "none",
-      "message": ""
-    },
+    "error": null,
+    "side_effect_unknown": false,
     "audit": [
       {
         "seq": 0,
-        "ts": "2026-11-02T10:00:00Z",
+        "ts_ms": 1793613600000,
         "type": "run_created",
         "run_id": "run_full_001",
         "step_id": "step_0",
@@ -52,11 +53,11 @@
           "reason": "run created"
         },
         "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-        "hash": "3f2b1c9d8e7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0"
+        "hash": "b74d8049c09ca5b94339f11f4ae02992ab5c92e4ec865e10542bfb43e27402d5"
       },
       {
         "seq": 1,
-        "ts": "2026-11-02T10:00:01Z",
+        "ts_ms": 1793613601000,
         "type": "step_started",
         "run_id": "run_full_001",
         "step_id": "step_0",
@@ -65,8 +66,8 @@
           "tool": "search",
           "args_digest": "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90"
         },
-        "prev_hash": "3f2b1c9d8e7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0",
-        "hash": "9c8b7a6d5e4f30211f2e3d4c5b6a79880716253443526170f9e8d7c6b5a4938271"
+        "prev_hash": "b74d8049c09ca5b94339f11f4ae02992ab5c92e4ec865e10542bfb43e27402d5",
+        "hash": "2bf2b6a1f544a0bbee4cd3608e61eb15fc2a551bed6fb2b9c311dae906de1e6b"
       }
     ],
     "tools": [
@@ -75,11 +76,13 @@
         "tier": "read",
         "args_schema": {
           "type": "object",
-          "required": ["query"],
+          "required": [
+            "query"
+          ],
           "enum": []
         },
         "side_effect": "none",
-        "idempotency_key_template": "run/{run_id}/step/{step_id}/search",
+        "dedupe_key_template": "run/{run_id}/step/{step_id}/search",
         "result_budget_bytes": 8192
       },
       {
@@ -87,10 +90,12 @@
         "tier": "read",
         "args_schema": {
           "type": "object",
-          "required": ["path"]
+          "required": [
+            "path"
+          ]
         },
         "side_effect": "none",
-        "idempotency_key_template": "run/{run_id}/step/{step_id}/read_file",
+        "dedupe_key_template": "run/{run_id}/step/{step_id}/read_file",
         "result_budget_bytes": 65536
       },
       {
@@ -98,77 +103,120 @@
         "tier": "write",
         "args_schema": {
           "type": "object",
-          "required": ["path", "content"]
+          "required": [
+            "path",
+            "content"
+          ]
         },
         "side_effect": "idempotent",
-        "idempotency_key_template": "run/{run_id}/step/{step_id}/write_file",
+        "dedupe_key_template": "run/{run_id}/step/{step_id}/write_file",
         "result_budget_bytes": 65536
       }
-    ]
+    ],
+    "reservations": []
   },
-  "step": {
-    "step_id": "step_0",
-    "attempt": 1,
-    "side_effect": "none",
-    "idempotency_key": "idem-step-full-001",
-    "idempotency_scope": "run_full_001/step_0/search",
-    "approval": {
-      "required": false,
-      "status": "approved",
-      "by": "system",
-      "at": "2026-11-02T10:00:00Z",
-      "expires_at": "2026-11-02T11:00:00Z"
-    },
-    "args": {
-      "query": "中文参数：控制面契约",
-      "top_k": 5,
-      "recursive": false,
-      "filter": null,
-      "tags": ["契约", "v0.1"],
-      "nested": {
-        "b": 2,
-        "a": 1
-      }
-    },
-    "granted": {
-      "deadline_at_ms": 1793594400000,
-      "deadline_ms": 30000,
-      "clock": "wall",
-      "scope": "run_full_001/step_0/search",
-      "quota": {
-        "cost_usd": 100000,
-        "tool_calls": 5,
-        "tokens": 20000
-      }
-    },
-    "grant_request": {
-      "run_id": "run_full_001",
+  "step": [
+    {
       "step_id": "step_0",
       "attempt": 1,
-      "idempotency_scope": "run_full_001/step_0/search",
-      "tool": "search",
+      "side_effect": "none",
+      "dedupe_scope": "run_full_001/step_0/search",
+      "effective_tier": "read",
+      "approval": {
+        "required": false,
+        "status": "approved",
+        "by": "system",
+        "at": "2026-11-02T10:00:00Z",
+        "expires_at": "2026-11-02T11:00:00Z"
+      },
       "args": {
         "query": "中文参数：控制面契约",
         "top_k": 5,
         "recursive": false,
         "filter": null,
-        "tags": ["契约", "v0.1"],
+        "tags": [
+          "契约",
+          "v0.1"
+        ],
         "nested": {
           "b": 2,
           "a": 1
         }
+      },
+      "granted": {
+        "deadline_at_ms": 1793594400000,
+        "deadline_ms": 30000,
+        "clock": "wall",
+        "scope": "run_full_001/step_0/search",
+        "quota": {
+          "cost_usd": 100000,
+          "tool_calls": 5,
+          "tokens": 20000
+        }
+      },
+      "grant_request": {
+        "run_id": "run_full_001",
+        "step_id": "step_0",
+        "attempt": 1,
+        "dedupe_scope": "run_full_001/step_0/search",
+        "tool": "search",
+        "args": {
+          "query": "中文参数：控制面契约",
+          "top_k": 5,
+          "recursive": false,
+          "filter": null,
+          "tags": [
+            "契约",
+            "v0.1"
+          ],
+          "nested": {
+            "b": 2,
+            "a": 1
+          }
+        }
       }
     }
-  },
+  ],
   "x-status-transitions": {
-    "created": ["running", "cancelled"],
-    "running": ["waiting_approval", "paused", "degraded", "succeeded", "failed", "cancelled", "outcome_unknown"],
-    "waiting_approval": ["running", "cancelled", "failed"],
-    "paused": ["running", "cancelled"],
-    "degraded": ["running", "succeeded", "failed", "cancelled"],
+    "created": [
+      "cancelled",
+      "running",
+      "waiting_approval"
+    ],
+    "running": [
+      "cancelled",
+      "degraded",
+      "failed",
+      "outcome_unknown",
+      "paused",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "waiting_approval": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "paused": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "degraded": [
+      "cancelled",
+      "failed",
+      "outcome_unknown",
+      "running",
+      "succeeded",
+      "waiting_approval"
+    ],
     "succeeded": [],
     "failed": [],
     "cancelled": [],
-    "outcome_unknown": ["running", "failed"]
+    "outcome_unknown": [
+      "cancelled",
+      "failed",
+      "succeeded"
+    ]
   }
 }

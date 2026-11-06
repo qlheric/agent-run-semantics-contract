@@ -1,7 +1,7 @@
 {
   "$comment": "M1 Agent Run 契约 · 权威状态转移表（canonical status transitions）",
-  "version": "v0.1",
-  "doc": "run.status 的 9 个状态与合法转移边。本文件是**唯一权威**：M1 控制面与任何消费方一律以它为准。`run_semantics.schema.json` 只定形状（$defs/status_targets），fixtures 根级的 x-status-transitions 仅为场景样例、互不相同，不得当权威读取。",
+  "version": "0.4.0",
+  "doc": "run.status 的 9 个状态与合法转移边。本文件是**唯一权威**：M1 控制面与任何消费方一律以它为准。`run_semantics.schema.json` 只定形状（$defs/status_targets），fixtures 根级的 x-status-transitions 仅为场景样例，**均对齐权威表**（纪律④：逐状态、逐目标相等），不得当权威读取。",
   "states": [
     "created",
     "running",
@@ -14,20 +14,37 @@
     "outcome_unknown"
   ],
   "transitions": {
-    "created": ["running", "cancelled"],
+    "created": ["running", "waiting_approval", "cancelled"],
     "running": ["waiting_approval", "paused", "degraded", "succeeded", "failed", "cancelled", "outcome_unknown"],
     "waiting_approval": ["running", "cancelled", "failed"],
-    "paused": ["running", "cancelled"],
-    "degraded": ["running", "succeeded", "failed", "cancelled"],
+    "paused": ["running", "failed", "cancelled"],
+    "degraded": ["running", "waiting_approval", "succeeded", "failed", "cancelled", "outcome_unknown"],
     "succeeded": [],
     "failed": [],
     "cancelled": [],
-    "outcome_unknown": ["running", "failed"]
+    "outcome_unknown": ["cancelled", "failed", "succeeded"]
   },
+  "forbidden": [
+    {
+      "from": "outcome_unknown",
+      "to": "running",
+      "reason": "安全洞：未经对账不得重入执行态（副作用状态未知时重新执行 ⇒ 可能重复副作用）。该边在 v0.4.0 被删除，且被本表显式列入黑名单：即使有人把它加回来，校验器也会直接判红。"
+    }
+  ],
+  "guards": [
+    {
+      "from": "outcome_unknown",
+      "targets": ["failed", "succeeded"],
+      "requires": ["evidence_ref"],
+      "reason": "离开 outcome_unknown 必须带外部对账证据：审计里 type=state_transition 的条目，其 payload 必带 evidence_ref（缺失 ⇒ --replay 判红，路径 /run/audit/<i>/payload/evidence_ref）。"
+    }
+  ],
   "notes": [
-    "空数组 = 终态，无出口。",
-    "waiting_approval 既是初始态（policy 要求先批再跑）也可由 running 进入（执行中需要人批）。",
-    "created → running 是正常启动；created → cancelled 是启动前撤销。",
+    "空数组 = 终态（terminal）：succeeded / failed / cancelled —— 没有出口，run 到此不再推进。",
+    "outcome_unknown 是**准静态态（quiescent）而非终态**：它有出边（failed / succeeded / cancelled），但每条出边都带 guard —— 必须有外部对账证据（evidence_ref）才能离开；未经对账不得重入执行态。",
+    "waiting_approval 既是初始可达态（policy 要求先批后跑）也可由 running / degraded 进入（执行中需要人批）。",
+    "created → running 是正常启动；created → waiting_approval 是「先批后跑」；created → cancelled 是启动前撤销。",
+    "paused → failed：系统超时是「结束」不是「被取消」（取消用 cancelled）。",
     "语义前置条件（如 deny 只允许 waiting_approval）不写进本表，留在服务层判定。"
   ]
 }

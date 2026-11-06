@@ -1,0 +1,124 @@
+{
+  "$comment": "负例⑧：reservation.state 是非法取值 \"pending\"（合法只有 held/settled/released/expired）⇒ 期望拒绝路径 /run/reservations/0/state",
+  "spec": {
+    "version": "0.4.0",
+    "clock": "wall",
+    "framework": "langgraph"
+  },
+  "run": {
+    "run_id": "run_invalid_reservation_008",
+    "status": "running",
+    "clock": "wall",
+    "idempotency_key": "idem-invalid-reservation-008",
+    "policy": {
+      "capability_tier": "read",
+      "max_attempts": 1,
+      "retry_profile": {
+        "name": "model_only",
+        "max_attempts": 1,
+        "backoff_ms": 0,
+        "retryable_tools": []
+      }
+    },
+    "budget": {
+      "max_steps": 10,
+      "max_tool_calls": 20,
+      "max_tokens": 30000,
+      "max_cost_usd": 1000000,
+      "currency": "USD",
+      "price_snapshot_id": "price-2026-11-01"
+    },
+    "termination": {
+      "reason": "completed"
+    },
+    "error": null,
+    "side_effect_unknown": false,
+    "audit": [],
+    "tools": [],
+    "reservations": [
+      {
+        "id": "resv_invalid_008_s0",
+        "step_id": "step_0",
+        "attempt": 1,
+        "amount_micro": 5000,
+        "price_snapshot_id": "price-2026-11-01",
+        "state": "pending",
+        "settled_micro": null,
+        "refund_micro": null
+      }
+    ]
+  },
+  "step": [
+    {
+      "step_id": "step_0",
+      "attempt": 1,
+      "side_effect": "none",
+      "dedupe_scope": "run_invalid_reservation_008/step_0/search",
+      "effective_tier": "read",
+      "approval": {
+        "required": false,
+        "status": "approved"
+      },
+      "args": {
+        "query": "x"
+      },
+      "granted": {
+        "deadline_at_ms": 1793613600000,
+        "deadline_ms": 5000,
+        "clock": "wall"
+      },
+      "grant_request": {
+        "run_id": "run_invalid_reservation_008",
+        "step_id": "step_0",
+        "attempt": 1,
+        "dedupe_scope": "run_invalid_reservation_008/step_0/search",
+        "tool": "search",
+        "args": {
+          "query": "x"
+        }
+      }
+    }
+  ],
+  "x-status-transitions": {
+    "created": [
+      "cancelled",
+      "running",
+      "waiting_approval"
+    ],
+    "running": [
+      "cancelled",
+      "degraded",
+      "failed",
+      "outcome_unknown",
+      "paused",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "waiting_approval": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "paused": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "degraded": [
+      "cancelled",
+      "failed",
+      "outcome_unknown",
+      "running",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "succeeded": [],
+    "failed": [],
+    "cancelled": [],
+    "outcome_unknown": [
+      "cancelled",
+      "failed",
+      "succeeded"
+    ]
+  }
+}

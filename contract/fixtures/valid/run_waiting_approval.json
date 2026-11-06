@@ -1,7 +1,7 @@
 {
   "$comment": "waiting_approval 状态样例：等待人工审批，approval.status=pending 且 required=true",
   "spec": {
-    "version": "0.1.0",
+    "version": "0.4.0",
     "clock": "wall",
     "framework": "langgraph"
   },
@@ -31,9 +31,8 @@
     "termination": {
       "reason": "completed"
     },
-    "error": {
-      "code": "none"
-    },
+    "error": null,
+    "side_effect_unknown": false,
     "audit": [],
     "tools": [
       {
@@ -43,50 +42,84 @@
           "type": "object"
         },
         "side_effect": "none",
-        "idempotency_key_template": "run/{run_id}/step/{step_id}/search",
+        "dedupe_key_template": "run/{run_id}/step/{step_id}/search",
         "result_budget_bytes": 8192
       }
-    ]
+    ],
+    "reservations": []
   },
-  "step": {
-    "step_id": "step_1",
-    "attempt": 1,
-    "side_effect": "none",
-    "idempotency_key": "idem-step-waiting-004",
-    "idempotency_scope": "run_waiting_004/step_1/search",
-    "approval": {
-      "required": true,
-      "status": "pending",
-      "expires_at": "2026-11-02T10:30:00Z"
-    },
-    "args": {
-      "query": "待审批的检索"
-    },
-    "granted": {
-      "deadline_at_ms": 1793594400000,
-      "deadline_ms": 10000,
-      "clock": "wall"
-    },
-    "grant_request": {
-      "run_id": "run_waiting_004",
+  "step": [
+    {
       "step_id": "step_1",
       "attempt": 1,
-      "idempotency_scope": "run_waiting_004/step_1/search",
-      "tool": "search",
+      "side_effect": "none",
+      "dedupe_scope": "run_waiting_004/step_1/search",
+      "effective_tier": "read",
+      "approval": {
+        "required": true,
+        "status": "pending",
+        "expires_at": "2026-11-02T10:30:00Z"
+      },
       "args": {
         "query": "待审批的检索"
+      },
+      "granted": {
+        "deadline_at_ms": 1793594400000,
+        "deadline_ms": 10000,
+        "clock": "wall"
+      },
+      "grant_request": {
+        "run_id": "run_waiting_004",
+        "step_id": "step_1",
+        "attempt": 1,
+        "dedupe_scope": "run_waiting_004/step_1/search",
+        "tool": "search",
+        "args": {
+          "query": "待审批的检索"
+        }
       }
     }
-  },
+  ],
   "x-status-transitions": {
-    "created": ["running"],
-    "running": ["waiting_approval", "succeeded", "failed"],
-    "waiting_approval": ["running", "cancelled", "failed"],
-    "paused": ["running"],
-    "degraded": ["running"],
+    "created": [
+      "cancelled",
+      "running",
+      "waiting_approval"
+    ],
+    "running": [
+      "cancelled",
+      "degraded",
+      "failed",
+      "outcome_unknown",
+      "paused",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "waiting_approval": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "paused": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "degraded": [
+      "cancelled",
+      "failed",
+      "outcome_unknown",
+      "running",
+      "succeeded",
+      "waiting_approval"
+    ],
     "succeeded": [],
     "failed": [],
     "cancelled": [],
-    "outcome_unknown": ["running"]
+    "outcome_unknown": [
+      "cancelled",
+      "failed",
+      "succeeded"
+    ]
   }
 }
