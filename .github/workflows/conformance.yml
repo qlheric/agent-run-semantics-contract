@@ -11,6 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # 需要历史：CHANGELOG 纪律步骤要 diff push 前后的两个 commit
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
