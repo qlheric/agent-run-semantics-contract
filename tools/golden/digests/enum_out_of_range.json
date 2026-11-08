@@ -1,0 +1,1 @@
+digest error: contract/fixtures/invalid/enum_out_of_range.json 不符合契约：/run/status ('running_v2' is not one of ['created', 'running', 'waiting_approval', 'paused', 'degraded', 'succeeded', 'failed', 'cancelled', 'outcome_unknown'])

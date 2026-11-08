@@ -1,0 +1,1 @@
+digest error: contract/fixtures/invalid/extra_property.json 不符合契约：/run/extra_field (Additional properties are not allowed ('extra_field' was unexpected))

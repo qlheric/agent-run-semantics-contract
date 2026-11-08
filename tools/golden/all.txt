@@ -1,0 +1,14 @@
+rejected contract/fixtures/invalid/enum_out_of_range.json path=/run/status
+rejected contract/fixtures/invalid/extra_property.json path=/run/extra_field
+rejected contract/fixtures/invalid/float_amount.json path=/run/budget/max_cost_usd
+rejected contract/fixtures/invalid/invalid_audit_chain.json path=/run/audit/1/hash
+rejected contract/fixtures/invalid/invalid_illegal_edge.json path=/run/audit/2/payload
+rejected contract/fixtures/invalid/invalid_replay_gap.json path=/run/audit/1/payload/from
+rejected contract/fixtures/invalid/invalid_unknown_no_evidence.json path=/run/audit/2/payload/evidence_ref
+rejected contract/fixtures/invalid/missing_required.json path=/run/policy
+rejected contract/fixtures/invalid/negative_budget.json path=/run/budget/max_cost_usd
+rejected contract/fixtures/invalid/reservation_bad_state.json path=/run/reservations/0/state
+rejected contract/fixtures/invalid/step_not_array.json path=/step
+rejected contract/fixtures/invalid/tier_privilege_escalation.json path=/step/0/effective_tier
+valid=14/14 passed
+invalid=12/12 rejected

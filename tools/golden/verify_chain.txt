@@ -1,0 +1,6 @@
+chain ok contract/fixtures/valid/audit_nonbmp_key.json entries=1
+chain ok contract/fixtures/valid/run_outcome_unknown.json entries=1
+chain ok contract/fixtures/valid/run_unknown_resolved.json entries=3
+chain ok contract/fixtures/valid/step_full.json entries=2
+chain ok contract/fixtures/valid/step_replay.json entries=4
+chain=5/5 verified

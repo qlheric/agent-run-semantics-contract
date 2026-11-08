@@ -1,0 +1,1 @@
+digest error: contract/fixtures/invalid/negative_budget.json 不符合契约：/run/budget/max_cost_usd (-1 is less than the minimum of 0)

@@ -16,7 +16,7 @@ jobs:
           python-version: "3.12"
       - name: Install validator dependency
         run: python -m pip install --quiet "jsonschema>=4.20"
-      - name: Schema + fixtures (valid 9/9, invalid 5/5)
+      - name: Schema + fixtures (valid 14/14, invalid 12/12)
         run: python tools/contract_check.py --all
       - name: Coverage / fields (one-line JSON)
         run: |
@@ -24,3 +24,5 @@ jobs:
           python tools/contract_check.py --fields
       - name: Canonical digest smoke (byte-exact)
         run: python tools/contract_check.py --digest contract/fixtures/valid/step_full.json
+      - name: Golden diff — Python implementation vs Java-generated golden (33 cases)
+        run: python tools/check_golden.py

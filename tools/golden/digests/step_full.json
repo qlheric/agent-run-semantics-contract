@@ -1,0 +1,2 @@
+canonical: {"nested":{"a":1,"b":2},"query":"中文参数：控制面契约","recursive":false,"tags":["契约","v0.1"],"top_k":5}
+sha256: d45b61e0549b63d28f2579042d2bcb2275fae91fe45b603691b7af42072986fd

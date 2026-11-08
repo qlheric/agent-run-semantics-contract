@@ -1,0 +1,6 @@
+replay ok contract/fixtures/valid/audit_nonbmp_key.json transitions=0
+replay ok contract/fixtures/valid/run_outcome_unknown.json transitions=0
+replay ok contract/fixtures/valid/run_unknown_resolved.json transitions=3
+replay ok contract/fixtures/valid/step_full.json transitions=0
+replay ok contract/fixtures/valid/step_replay.json transitions=4
+replay=5/5 verified

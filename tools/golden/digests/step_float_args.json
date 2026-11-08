@@ -1,0 +1,2 @@
+canonical: {"max_tokens":1024,"prompt":"总结这段契约","seed":42,"temperature":0.7,"top_p":0.95}
+sha256: d013cd0ed1f3a20a3762f34baaa380ff5161a66a654a189aa0948a6415ef1104

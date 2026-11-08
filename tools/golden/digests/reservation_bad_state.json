@@ -1,0 +1,1 @@
+digest error: contract/fixtures/invalid/reservation_bad_state.json 不符合契约：/run/reservations/0/state ('pending' is not one of ['held', 'settled', 'released', 'expired'])
