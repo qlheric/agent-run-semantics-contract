@@ -16,6 +16,19 @@ jobs:
           python-version: "3.12"
       - name: Install validator dependency
         run: python -m pip install --quiet "jsonschema>=4.20"
+      - name: Version consistency ($id / title / enum / transitions / CHANGELOG)
+        run: python tools/check_versions.py
+      - name: Contract changes require a CHANGELOG entry
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+        run: |
+          changed=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}")
+          echo "$changed"
+          if echo "$changed" | grep -q '^contract/'; then
+            if ! echo "$changed" | grep -q '^CHANGELOG.md'; then
+              echo "::error::contract/ changed without a CHANGELOG.md entry"
+              exit 1
+            fi
+          fi
       - name: Schema + fixtures (valid 14/14, invalid 12/12)
         run: python tools/contract_check.py --all
       - name: Coverage / fields (one-line JSON)
