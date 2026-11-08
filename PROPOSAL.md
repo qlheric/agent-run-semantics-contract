@@ -55,16 +55,18 @@ We deliberately compare against the nearest work instead of asserting novelty.
 
 ## 3. Cross-language conformance (the checkable part)
 
-Python validator + independent Java implementation validate the **same fixtures**:
+Python validator + independent Java implementation validate the **same fixtures**. Since v0.4.0 the agreement is **committed as evidence**, not asserted:
 
 ```bash
 python -m pip install "jsonschema>=4.20"
-python tools/contract_check.py --all     # valid=9/9, invalid=5/5
-python tools/contract_check.py --digest contract/fixtures/valid/step_full.json
+python tools/contract_check.py --all     # valid=14/14, invalid=12/12
+python tools/check_golden.py             # Python impl vs Java-generated golden: 33/33 byte-identical
 ```
 
+- `tools/golden/` is produced by the **independent Java implementation**: 7 command outputs, 26 per-fixture digests, exit codes for 33 cases, and `MANIFEST.json` with sha256 per file;
+- `tools/check_golden.py` reruns every case with the Python implementation and compares **bytes** — divergence fails CI;
 - valid/invalid fixtures: same reject **paths** and exit codes across implementations;
-- canonical JSON + sha256: byte-identical across 14 fixtures;
+- canonical JSON + sha256 (JCS): byte-identical across all 26 fixtures;
 - exit-code discipline documented (`mvn` wrappers fold exit codes).
 
 ## 4. Review in 10 minutes (new)
