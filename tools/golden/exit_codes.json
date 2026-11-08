@@ -26,6 +26,8 @@
   "--digest contract/fixtures/invalid/invalid_audit_chain.json": 0,
   "--digest contract/fixtures/invalid/invalid_illegal_edge.json": 0,
   "--digest contract/fixtures/invalid/invalid_replay_gap.json": 0,
+  "--digest contract/fixtures/invalid/invalid_result_digest_format.json": 2,
+  "--digest contract/fixtures/invalid/invalid_tool_annotations_mismatch.json": 0,
   "--digest contract/fixtures/invalid/invalid_unknown_no_evidence.json": 0,
   "--digest contract/fixtures/invalid/missing_required.json": 2,
   "--digest contract/fixtures/invalid/negative_budget.json": 2,

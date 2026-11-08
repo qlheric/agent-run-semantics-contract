@@ -1,6 +1,6 @@
-# Agent Run Semantics Contract v0.4.0 (proposal, for review)
+# Agent Run Semantics Contract v0.5.0 (proposal, for review)
 
-> **Status**: v0.4.0-draft, seeking **at least 2 external technical reviews**. The three hard defects from review 01 are fixed; version history in [`CHANGELOG.md`](CHANGELOG.md).
+> **Status**: v0.5.0-draft, seeking **at least 2 external technical reviews**. The three hard defects from review 01 are fixed; version history in [`CHANGELOG.md`](CHANGELOG.md).
 > **What changed since review 01**: transition-table authority is now real (both implementations read it), audit hashes are computed per RFC 8785 JCS (all fixtures recomputed), `reserve → settle` and `step[]` are in the schema, `outcome_unknown → running` is removed and blacklisted, and a new **`--replay`** check ties the audit chain to the state machine.
 > **The claim we now consider checkable**: *an audit chain that replays into a legal state sequence, and refuses to leave `outcome_unknown` without evidence.*
 > Response channel: open an issue with `[run-semantics]` (template provided) or comment on #1.
@@ -59,8 +59,9 @@ Python validator + independent Java implementation validate the **same fixtures*
 
 ```bash
 python -m pip install "jsonschema>=4.20"
-python tools/contract_check.py --all     # valid=14/14, invalid=12/12
-python tools/check_golden.py             # Python impl vs Java-generated golden: 33/33 byte-identical
+python tools/contract_check.py --all     # valid=14/14, invalid=14/14
+python tools/check_versions.py           # version consistency
+python tools/check_golden.py             # Python impl vs Java-generated golden: 35/35 byte-identical
 ```
 
 - `tools/golden/` is produced by the **independent Java implementation**: 7 command outputs, 26 per-fixture digests, exit codes for 33 cases, and `MANIFEST.json` with sha256 per file;

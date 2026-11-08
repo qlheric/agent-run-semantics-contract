@@ -2,6 +2,15 @@
 
 All versions are **the same contract** (the `$id` never renames); the version set in `spec.version` lists compatible schema shapes.
 
+## v0.5.0 — 2026-11-08
+
+Vocabulary folding + audit reproducibility, driven by review 01 items #5 (tool tiers) and #23 (result strings in the hash).
+
+- **Tool annotations**: `tool_entry.annotations` is now required and maps **MCP `ToolAnnotations`** — `readOnlyHint / destructiveHint / idempotentHint / openWorldHint` (spec 2025-03-26+). Validators enforce consistency with `tier` / `side_effect` (`destructiveHint=true ⇒ tier=destructive`; `tier = destructive if destructiveHint else (read if readOnlyHint else write)`; `side_effect = none if readOnlyHint else (idempotent if idempotentHint else non_idempotent)`); mismatches are rejected at `/run/tools/<i>/annotations`. `openWorldHint` is kept deliberately — it predicts `outcome_unknown` (open-world tools have unverifiable results).
+- **Audit results**: `audit_payload.result` (free-text, hashed as-is) is replaced by **`result_digest`** (`^[0-9a-f]{64}$`, sha256 of the canonical bytes) — the same result can no longer hash differently depending on serialization.
+- Fixtures: 14 valid + 14 invalid; new negative cases for annotation/tier mismatch and malformed `result_digest`.
+- Golden output regenerated from the Java implementation: **35 cases** (7 commands + 28 digests), Python implementation byte-identical; version identifiers aligned to `0.5.0`.
+
 ## v0.4.0 — 2026-11-07
 
 Semantic layer, driven by review 01 (§3.2/§3.4) and the "replay" recommendation.

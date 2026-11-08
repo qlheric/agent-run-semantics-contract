@@ -1,6 +1,6 @@
-generated_at=2026-11-08T13:52:18Z
-java_commit=1830a88
-contract_version=0.4.0
+generated_at=2026-11-08T15:59:12Z
+java_commit=7037f71
+contract_version=0.5.0
 java_version=java version "25.0.4.1" 2026-08-18 LTS
 maven=Apache Maven 3.9.16 (2bdd9fddda4b155ebf8000e807eb73fd829a51d5)
-fixtures=26
+fixtures=28

@@ -1,9 +1,9 @@
 {
-  "contract_version": "0.4.0",
-  "java_commit": "1830a88",
-  "fixtures": 26,
+  "contract_version": "0.5.0",
+  "java_commit": "7037f71",
+  "fixtures": 28,
   "commands": [
-    { "cmd": "--all", "file": "all.txt", "sha256": "a823d5adb00d0923e9354258485e277cc7bd0f28b7bb631e0992a15ee70e5556" },
+    { "cmd": "--all", "file": "all.txt", "sha256": "ac323ebb6b11c4443888653c1f6fa42db79c97d5af43f5cb04d0b2d5fddd2d28" },
     { "cmd": "--schema", "file": "schema.txt", "sha256": "571a86cf66a6c283c24df245d11ae1e170f9fc10b7f9fcc0d636b22924e4c395" },
     { "cmd": "--coverage", "file": "coverage.txt", "sha256": "872bdd43e9c04ae8ba7fdd6cee8b5bb2cc0d1562fe5b80dfae3272980914a9dc" },
     { "cmd": "--fields", "file": "fields.txt", "sha256": "94011d7f1a7f7ab223cfcd0ec1a7f1729a1e9dcdd2be2835690918f0c91cf4d9" },
@@ -32,6 +32,8 @@
     { "fixture": "contract/fixtures/invalid/invalid_audit_chain.json", "golden": "digests/invalid_audit_chain.json", "exit_code": 0, "sha256": "5f19f7e32b974854945ad9081871c0884e12a42acd246134e64b6e457787e952" },
     { "fixture": "contract/fixtures/invalid/invalid_illegal_edge.json", "golden": "digests/invalid_illegal_edge.json", "exit_code": 0, "sha256": "ed677e887d3c0ac59a5c6178edb0fb0b766321083f4641f183dad8ff5f6fe858" },
     { "fixture": "contract/fixtures/invalid/invalid_replay_gap.json", "golden": "digests/invalid_replay_gap.json", "exit_code": 0, "sha256": "ed677e887d3c0ac59a5c6178edb0fb0b766321083f4641f183dad8ff5f6fe858" },
+    { "fixture": "contract/fixtures/invalid/invalid_result_digest_format.json", "golden": "digests/invalid_result_digest_format.json", "exit_code": 2, "sha256": "6deca1e19da68b2e3a8c880280b16fd38ac436c4fbc67b7d722a501adaba1cd7" },
+    { "fixture": "contract/fixtures/invalid/invalid_tool_annotations_mismatch.json", "golden": "digests/invalid_tool_annotations_mismatch.json", "exit_code": 0, "sha256": "94f1ffd11f8aae4c1a2f78b85beb03749ffb9b5cea427440e8e5496d49e32f93" },
     { "fixture": "contract/fixtures/invalid/invalid_unknown_no_evidence.json", "golden": "digests/invalid_unknown_no_evidence.json", "exit_code": 0, "sha256": "ed677e887d3c0ac59a5c6178edb0fb0b766321083f4641f183dad8ff5f6fe858" },
     { "fixture": "contract/fixtures/invalid/missing_required.json", "golden": "digests/missing_required.json", "exit_code": 2, "sha256": "264fc88cc3831368334a5202c47cc28da60c794db0d753e98d8b96c7827540c9" },
     { "fixture": "contract/fixtures/invalid/negative_budget.json", "golden": "digests/negative_budget.json", "exit_code": 2, "sha256": "3b352cf09a894c545fb9ee7685452cf002a282df1d3d22a9e1ce7cc53f315724" },

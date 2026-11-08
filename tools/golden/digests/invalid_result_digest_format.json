@@ -1,0 +1,1 @@
+digest error: contract/fixtures/invalid/invalid_result_digest_format.json 不符合契约：/run/audit/0/payload/result_digest ('7bd381e0' does not match '^[0-9a-f]{64}$')
