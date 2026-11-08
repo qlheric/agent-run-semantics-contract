@@ -1,7 +1,7 @@
 {
   "$comment": "v0.3 多步样例：step 是**数组**（2 个 step）；含 reservations（reserve→settle 结构化留痕，一条 settled 一条 released）；args 里带 LLM 浮点参数 temperature=0.7（v0.3 放开浮点）；effective_tier 被工具档压低（policy=write，tool=destructive ⇒ effective=write）",
   "spec": {
-    "version": "0.4.0",
+    "version": "0.5.0",
     "clock": "wall",
     "framework": "langgraph"
   },
@@ -51,6 +51,12 @@
       {
         "tool": "search",
         "tier": "read",
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": false,
+            "openWorldHint": true
+          },
         "args_schema": {
           "type": "object",
           "required": [
@@ -64,6 +70,12 @@
       {
         "tool": "charge_card",
         "tier": "destructive",
+          "annotations": {
+            "readOnlyHint": false,
+            "destructiveHint": true,
+            "idempotentHint": false,
+            "openWorldHint": true
+          },
         "args_schema": {
           "type": "object",
           "required": [

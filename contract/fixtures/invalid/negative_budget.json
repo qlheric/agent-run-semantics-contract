@@ -1,7 +1,7 @@
 {
   "$comment": "负样本⑤：负数预算 max_cost_usd=-1（拒绝路径 /run/budget/max_cost_usd，minimum 约束）",
   "spec": {
-    "version": "0.4.0",
+    "version": "0.5.0",
     "clock": "wall",
     "framework": "langgraph"
   },

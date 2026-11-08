@@ -1,7 +1,7 @@
 {
   "$comment": "succeeded 状态样例：正常收束，termination.reason=completed，error.code=none",
   "spec": {
-    "version": "0.4.0",
+    "version": "0.5.0",
     "clock": "wall",
     "framework": "langgraph"
   },
@@ -47,6 +47,12 @@
       {
         "tool": "search",
         "tier": "read",
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": false,
+            "openWorldHint": true
+          },
         "args_schema": {
           "type": "object"
         },

@@ -1,7 +1,7 @@
 {
   "$comment": "边界样例：大参数走 args_ref（无 step.args），digest 只对引用字符串做",
   "spec": {
-    "version": "0.4.0",
+    "version": "0.5.0",
     "clock": "monotonic",
     "framework": "custom"
   },
@@ -38,6 +38,12 @@
       {
         "tool": "read_file",
         "tier": "read",
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": false,
+            "openWorldHint": true
+          },
         "args_schema": {
           "type": "object"
         },

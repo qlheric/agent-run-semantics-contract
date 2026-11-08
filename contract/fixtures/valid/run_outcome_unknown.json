@@ -1,7 +1,7 @@
 {
   "$comment": "outcome_unknown 状态样例：非幂等副作用失败 ⇒ 结果未知（不是 failed），调用方不得直接重试",
   "spec": {
-    "version": "0.4.0",
+    "version": "0.5.0",
     "clock": "wall",
     "framework": "langgraph"
   },
@@ -54,16 +54,23 @@
         "payload": {
           "tool": "charge_card",
           "args_digest": "b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1",
-          "reason": "side_effect_unknown"
+          "reason": "side_effect_unknown",
+          "result_digest": "7bd381e034b2af386f1b782280f7cb5531323be438643f8f951f9b367eeec482"
         },
         "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-        "hash": "853e4b8092e9f27181c2ef0ea32c52cdf2e9fb4c8a374654e2145becae2f93ab"
+        "hash": "082cef231fc45425d5be011f69e76b1e043df64604e4ffb6d95a34f3cb330945"
       }
     ],
     "tools": [
       {
         "tool": "charge_card",
         "tier": "destructive",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
         "args_schema": {
           "type": "object",
           "required": [

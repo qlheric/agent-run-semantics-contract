@@ -1,7 +1,7 @@
 {
   "$comment": "负样本④：多余字段 run.extra_field（拒绝路径 /run/extra_field，additionalProperties:false）",
   "spec": {
-    "version": "0.4.0",
+    "version": "0.5.0",
     "clock": "wall",
     "framework": "langgraph"
   },

@@ -1,7 +1,7 @@
 {
   "$comment": "degraded 状态样例：预算降级后继续跑，step.side_effect=non_idempotent（不自动重试）",
   "spec": {
-    "version": "0.4.0",
+    "version": "0.5.0",
     "clock": "monotonic",
     "framework": "custom"
   },
@@ -45,6 +45,12 @@
       {
         "tool": "read_file",
         "tier": "read",
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": false,
+            "openWorldHint": true
+          },
         "args_schema": {
           "type": "object"
         },
@@ -55,6 +61,12 @@
       {
         "tool": "charge_card",
         "tier": "destructive",
+          "annotations": {
+            "readOnlyHint": false,
+            "destructiveHint": true,
+            "idempotentHint": false,
+            "openWorldHint": true
+          },
         "args_schema": {
           "type": "object",
           "required": [

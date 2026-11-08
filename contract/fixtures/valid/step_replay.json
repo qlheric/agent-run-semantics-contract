@@ -1,7 +1,7 @@
 {
   "$comment": "v0.4 replay 样例：完整状态转移序列（created→running→waiting_approval→running→succeeded），审计里 type=state_transition 的条目链式连续、每条边都在权威表内",
   "spec": {
-    "version": "0.4.0",
+    "version": "0.5.0",
     "clock": "wall",
     "framework": "langgraph"
   },
@@ -106,6 +106,12 @@
       {
         "tool": "search",
         "tier": "read",
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": false,
+            "openWorldHint": true
+          },
         "args_schema": {
           "type": "object",
           "required": [

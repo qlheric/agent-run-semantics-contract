@@ -1,6 +1,6 @@
 {
   "$comment": "M1 Agent Run 契约 · 权威状态转移表（canonical status transitions）",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "doc": "run.status 的 9 个状态与合法转移边。本文件是**唯一权威**：M1 控制面与任何消费方一律以它为准。`run_semantics.schema.json` 只定形状（$defs/status_targets），fixtures 根级的 x-status-transitions 仅为场景样例，**均对齐权威表**（纪律④：逐状态、逐目标相等），不得当权威读取。",
   "states": [
     "created",

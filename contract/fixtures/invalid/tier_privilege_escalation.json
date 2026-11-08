@@ -1,7 +1,7 @@
 {
   "$comment": "负例⑨：权限档越权 —— policy.capability_tier=read，工具 tier=destructive，却把 effective_tier 写成 destructive ⇒ 期望拒绝路径 /step/0/effective_tier（由权限档裁决拒绝，不是 schema 拒绝）",
   "spec": {
-    "version": "0.4.0",
+    "version": "0.5.0",
     "clock": "wall",
     "framework": "langgraph"
   },
@@ -38,6 +38,12 @@
       {
         "tool": "charge_card",
         "tier": "destructive",
+          "annotations": {
+            "readOnlyHint": false,
+            "destructiveHint": true,
+            "idempotentHint": false,
+            "openWorldHint": true
+          },
         "args_schema": {
           "type": "object",
           "required": [

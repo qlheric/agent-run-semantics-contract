@@ -1,7 +1,7 @@
 {
   "$comment": "负样本③：金额用浮点 max_cost_usd=1.5（拒绝路径 /run/budget/max_cost_usd）",
   "spec": {
-    "version": "0.4.0",
+    "version": "0.5.0",
     "clock": "wall",
     "framework": "langgraph"
   },

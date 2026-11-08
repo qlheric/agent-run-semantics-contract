@@ -1,4 +1,4 @@
-# 双端一致性比对协议（Conformance Protocol v0.4.0）
+# 双端一致性比对协议（Conformance Protocol v0.5.0）
 
 > 目的：证明 **Java 侧（TASK-001）与 Python 侧** 对同一份契约的理解**逐字节一致**。
 > 唯一真源 = `contract/run_semantics.schema.json`。
@@ -298,6 +298,109 @@ replay=<通过数>/<总数> verified
 > **检查顺序**（两端必须一致，错了输出会分叉）：
 > `schema → 审计链（纪律⑤）→ 转移表一致性（纪律④）→ 权限档裁决（纪律⑥）→ 副作用标志（纪律⑦）→ replay（纪律⑧）`。
 
+## 3.8 v0.5 新纪律⑨：工具注解折叠 MCP ToolAnnotations（TASK-050）
+
+> 与纪律④⑤⑥⑦⑧同性质：**Java 侧与 Python 侧都必须实现**，否则两端 `--all` 输出会分叉。
+
+### 3.8.1 为什么要注解（`annotations`）
+
+v0.4 之前，工具的能力档（`tools[].tier`）与副作用声明（`tools[].side_effect`）是本契约
+**自造**的字段 —— 消费方无从判断它们与 MCP 生态里那套
+`readOnlyHint / destructiveHint / idempotentHint / openWorldHint` 的对应关系。
+
+v0.5 起 `$defs/tool_entry` 增加 `annotations`（**四键必填，不许省略**）：
+
+```json
+"annotations": {
+  "readOnlyHint": false,
+  "destructiveHint": true,
+  "idempotentHint": false,
+  "openWorldHint": true
+}
+```
+
+* **出处**：MCP `ToolAnnotations`（spec 2025-03-26+），schema 里以 `x-source` 标注；
+* **四键必填的理由**：省略即「不知道」—— 而消费方**必须**能区分
+  「确定没有副作用」与「不知道有没有副作用」。MCP 侧允许缺省（缺省 `destructiveHint=true`），
+  本契约**收窄**为全必填（宁可显式写「是破坏性的」，也不要留空让人猜）。
+
+### 3.8.2 映射规则（**写死**，两端一致）
+
+| 推导项 | 规则 |
+|---|---|
+| `tier` | `destructive if destructiveHint else (read if readOnlyHint else write)` |
+| `side_effect` | `none if readOnlyHint else (idempotent if idempotentHint else non_idempotent)` |
+
+推论（等价形式，便于人读）：
+
+* `readOnlyHint=true` ⇒ `tier=read` **且** `side_effect=none`；
+* `destructiveHint=true` ⇒ `tier=destructive`；
+* `readOnlyHint=false` 且 `idempotentHint=true` ⇒ `side_effect=idempotent`；
+* `readOnlyHint=false` 且 `idempotentHint=false` ⇒ `side_effect=non_idempotent`。
+
+> **`openWorldHint` 不在推导链里**：它是 `outcome_unknown` 的**预测变量**
+> （与开放世界交互的工具，非幂等调用失败时更可能落 `outcome_unknown`），
+> **不是**权限/副作用的函数 ⇒ 自由取值，不参与一致性判定。
+
+### 3.8.3 判据（违反 ⇒ 拒绝路径 `/run/tools/<i>/annotations`）
+
+`annotations` 与 `tier` / `side_effect` 不一致 ⇒ **判红**。
+
+* 路径指向 **`/run/tools/<i>/annotations`**（**不是** `/run/tools/<i>/tier`）：
+  判定的事实来源是**注解**，`tier`/`side_effect` 只是被推导出来的那一端。
+* 形状不对（缺 hint、hint 不是布尔）⇒ **不重复报错**，交给 schema 报错
+  （否则同一处问题报两遍、路径不一致 ⇒ 双端输出分叉）。
+
+**负例**：`contract/fixtures/invalid/invalid_tool_annotations_mismatch.json`
+（期望路径 `/run/tools/0/annotations`）——
+它的 schema 形状**完全合法**（annotations 四键齐全、值都是布尔），
+**只能**靠纪律⑨被拒 ⇒ 它是「纪律⑨真的在跑」的证据。
+
+### 3.8.4 检查顺序（两端必须一致，错了输出会分叉）
+
+`schema → 审计链（纪律⑤）→ 转移表一致性（纪律④）→ 权限档裁决（纪律⑥）→
+副作用标志（纪律⑦）→ replay（纪律⑧）→ 工具注解一致性（纪律⑨）`。
+
+## 3.9 v0.5 新口径：`result_digest`（替代 `result`）
+
+### 3.9.1 为什么改
+
+v0.4 的 `audit_payload.result` 是**自由字符串**，而它**参与审计哈希**
+（纪律⑤ 的 JCS 数组里含整个 payload）⇒ 同一份工具结果换个措辞、多个字、标点不同，
+哈希就变 ⇒ 「同一件事」的哈希对不上、跨实现复算困难。
+
+v0.5 起：`result`（自由字符串）**删除**，改 `result_digest`：
+
+```json
+"result_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+```
+
+* **哈希公式不变**（纪律⑤ 的 JCS 数组里 payload 已是 canonical）——
+  只是 payload 的**内容**从自由文本变成了固定宽度的摘要；
+* 原文（人可读的 detail）走 `extra` 逃生舱或 run 的其它字段，**不参与哈希**；
+* 格式非法（不是 64 位小写 hex）⇒ schema `pattern` 拒 ⇒ 路径
+  `/run/audit/<i>/payload/result_digest`。
+
+### 3.9.2 摘要口径（**写死**，两端一致）
+
+```
+result_digest = sha256( canonical_json(canonicalize(result_value)).encode("utf-8") ).hexdigest()
+```
+
+`canonicalize` / `canonical_json` 与 **`args_digest` 同一口径**
+（码位序 + NFC + null 键剔除 + ECMAScript Number::toString）⇒ 复用现成实现，
+**不另写一套**（两套算法迟早分叉）。
+
+**负例**：`contract/fixtures/invalid/invalid_result_digest_format.json`
+（期望路径 `/run/audit/0/payload/result_digest`）。
+
+### 3.9.3 `--verify-chain` / `--replay` 逻辑不变
+
+纪律⑤ 与纪律⑧ 的**判据与公式都没变**（变的只是 payload 里那个字段的值形态）⇒
+`--verify-chain` / `--replay` 的实现与输出格式**不动**。
+但注意：**payload 变了 ⇒ 哈希变了** ⇒ 存量 fixture 的 `hash` 必须**按新公式重算**
+（不是手改，是工具算）。
+
 ## 4. fixtures 清单与用途
 
 ### 4.1 `contract/fixtures/valid/`（14 条，全部必须通过）
@@ -318,6 +421,10 @@ replay=<通过数>/<总数> verified
 | `run_outcome_unknown.json` | `outcome_unknown` 状态 | 非幂等副作用失败的交代；`side_effect_unknown=true`；审计里带 `args_digest`（含 audit 链） |
 | `step_replay.json` | **v0.4 replay 样例**（纪律⑧） | 完整状态转移序列 `created→running→waiting_approval→running→succeeded`；审计里 4 条 `type=state_transition` 条目，链式连续、每条边都在权威表内 |
 | `run_unknown_resolved.json` | **v0.4 guard 样例**（纪律⑧） | `outcome_unknown→succeeded` **带 `evidence_ref`**（外部对账证据）—— 证明「带证据可以离开未知态」 |
+| `run_outcome_unknown.json` | **v0.5 `result_digest` 样例** | 审计载荷里带 `result_digest`（64 位小写 hex，工具算的真值）—— 证明新字段能表达且能过 `pattern`；**该 fixture 的哈希链已按新载荷重算** |
+
+> **v0.5**：全部 14 份 valid fixture 的 `tools[]` 都带 `annotations`
+> （MCP ToolAnnotations 四键）⇒ 纪律⑨在 valid 侧**逐条被验证**（不是只有负例在跑）。
 
 > 覆盖判定由 `python tools/contract_check.py --coverage` 自动做：
 > 9 值 `run.status` 全出现、3 值 `run.policy.capability_tier`、3 值 `step[].effective_tier`、
@@ -329,7 +436,7 @@ replay=<通过数>/<总数> verified
 > ⚠️ `spec.framework` v0.3 起**不是枚举** ⇒ 不再要求「覆盖某个框架集合」；
 > 但 `--coverage` 仍**统计**出现过哪些值（`enums.framework`），供人看覆盖面。
 
-### 4.2 `contract/fixtures/invalid/`（恰好 12 条，全部必须被拒）
+### 4.2 `contract/fixtures/invalid/`（恰好 14 条，全部必须被拒）
 
 | 文件 | 触发点 | **期望拒绝路径** | 判据 |
 |---|---|---|---|
@@ -345,6 +452,8 @@ replay=<通过数>/<总数> verified
 | `invalid_illegal_edge.json` | **v0.4：非法边** `succeeded→running`（终态无出口） | `/run/audit/2/payload` | 纪律⑧（判据 3） |
 | `invalid_unknown_no_evidence.json` | **v0.4：`outcome_unknown→succeeded` 缺 `evidence_ref`** | `/run/audit/2/payload/evidence_ref` | 纪律⑧（判据 4） |
 | `invalid_replay_gap.json` | **v0.4：链式断裂**（第 2 条 `from=degraded`，上一条 `to=running`） | `/run/audit/1/payload/from` | 纪律⑧（判据 2） |
+| `invalid_tool_annotations_mismatch.json` | **v0.5：工具注解与 tier/side_effect 不一致**（annotations 四键齐全、值合法，但 `destructiveHint=true` 与 `tier=read` 冲突） | `/run/tools/0/annotations` | 纪律⑨（§3.8） |
+| `invalid_result_digest_format.json` | **v0.5：`result_digest` 不是 64 位小写 hex**（长度不足） | `/run/audit/0/payload/result_digest` | §3.9（schema `pattern`） |
 
 > 这 12 条拒绝路径是**跨语言 conformance 的核心断言**：
 > 两端必须报**同一条路径**，不是「都拒了」就算过。
@@ -359,6 +468,12 @@ replay=<通过数>/<总数> verified
 > **v0.4 的三条 replay 负例**同理：schema 与审计链**都完全合法**
 > （`state_transition` 的载荷形状合法、哈希链重算一致），
 > **只能**靠纪律⑧的重放判据被拒 ⇒ 它们是「replay 真的在跑」的证据。
+>
+> **v0.5 的两条负例**同理：
+> `invalid_tool_annotations_mismatch.json` 的 schema 形状完全合法
+> （annotations 四键齐全、值都是布尔）⇒ **只能**靠纪律⑨被拒；
+> `invalid_result_digest_format.json` 的审计链**已按新载荷重算、完全合法**
+> ⇒ **只能**靠 schema 的 `pattern` 被拒。
 
 ## 5. 「不一致怎么办」
 
@@ -383,7 +498,7 @@ replay=<通过数>/<总数> verified
 | # | 检查 | 判据 |
 |---|---|---|
 | 1 | 两端 `--all` 输出逐字节一致 | `diff` 空 |
-| 2 | 两端 `--digest` 输出逐字节一致（全部 26 份 fixture 各跑一遍：valid 14 + invalid 12） | `diff` 空 |
+| 2 | 两端 `--digest` 输出逐字节一致（全部 28 份 fixture 各跑一遍：valid 14 + invalid 14） | `diff` 空 |
 | 3 | 两端 `--coverage` 输出逐字节一致，且 `missing` 为空 | `diff` 空 + `missing=[]` |
 | 4 | 两端 `--fields` 输出逐字节一致 | `diff` 空 |
 | 5 | schema 枚举集合 ⊆ 两端枚举实现集合 | 缺一个即红 |
@@ -395,6 +510,9 @@ replay=<通过数>/<总数> verified
 | 11 | 两端 `--fields --count` 输出逐字节一致（必填字段总数自动导出） | `diff` 空 |
 | 12 | **v0.4**：`outcome_unknown → running` **不在**权威表的 `transitions` 里，且**在** `forbidden` 里 | `--all` 绿 |
 | 13 | **v0.4**：三条 replay 负例的期望拒绝路径精确命中 | `--all` 绿（§4.2 表格） |
+| 14 | **v0.5**：`invalid_tool_annotations_mismatch.json` 被拒于 `/run/tools/0/annotations` | `--all` 绿（纪律⑨） |
+| 15 | **v0.5**：`invalid_result_digest_format.json` 被拒于 `/run/audit/0/payload/result_digest` | `--all` 绿（schema `pattern`） |
+| 16 | **v0.5**：两端 `tools[].annotations` 与 `tier`/`side_effect` 逐条一致（纪律⑨两端都实现） | 两端 `--all` 输出逐字节一致 |
 
 ## 6. 已知边界（v0.3 明确不支持）
 
@@ -467,3 +585,4 @@ replay=<通过数>/<总数> verified
 | v0.1 (TASK-034) | 2026-11-06 | 新增**纪律④**（fixture 内嵌转移表必须与 `status-transitions.json` 逐状态逐目标相等；校验器必须真读权威表，读不到 ⇒ exit 1）与**纪律⑤**（审计链哈希公式 + genesis/链式/重算三条规则；`hash`/`prev_hash` 加 `^[0-9a-f]{64}$`）。新增 `--verify-chain` 子命令，`--all` 内含链校验与纪律④。**invalid 从 5 条增至 6 条**（新增 `invalid_audit_chain.json`，期望路径 `/run/audit/1/hash`）；**9 份 valid fixture 的内嵌转移表全部对齐权威表**（原先互相矛盾）；**2 份含 audit 的 valid fixture 的 `hash`/`prev_hash` 按新公式重算**（原先是手写占位符）。`--all` fixture 不符预期 ⇒ exit 2 |
 | v0.3.0 (TASK-035) | 2026-11-07 | **契约升 v0.3.0**（Review-01 的 P0 结构问题）。① `step` 改**数组**（`minItems≥1`）；② 新增 `run.reservations[]`（reserve→settle 结构化留痕，状态 `held/settled/released/expired`）；③ 审计时间戳 `ts` → **`ts_ms`**（epoch 毫秒整数，**进哈希**，公式改 `str(ts_ms)`）⇒ **全部审计哈希作废重算**；④ `args` **放开浮点**（LLM 参数 `temperature=0.7`），**金额/预算字段仍禁浮点**；⑤ `spec.version` 由 `const` 改**版本集合** `["0.2.0","0.3.0"]`，`$id` 改可解析 URI，**版本四处一致**（新增断言⑥）；⑥ `x-status-transitions` **取消 required**（唯一权威是 `status-transitions.json`）；⑦ 新增 `run.side_effect_unknown`（`outcome_unknown` 的读侧事实）；⑧ `run.error` 改**可空**（删 `code:"none"` 哨兵）；⑨ `spec.framework` **删枚举**改自由字符串；⑩ 新增 `step[].effective_tier` + **纪律⑥**（`= min(policy.capability_tier, tool.tier)`，越权即红）；⑪ 幂等 **4→2**（`run.idempotency_key` + `step[].dedupe_scope`；`tools[].idempotency_key_template` → `dedupe_key_template`；删 `step.idempotency_key`）；⑫ 「18 fields」改**自动导出**（`--fields --count`）；⑬ 顶层加**逃生舱**（`extensions` + `x-` 前缀）；⑭ 预算加五类 `used_tokens_*` 计数器（`max_tokens` 仅为粗护栏，不证明金额）；⑮ **JCS 键序改 UTF-16 码元序**（Python 不再用 `sort_keys=True`）+ 数字改 ES Number::toString；⑯ 修过时文字（README 与 `status-transitions.json` 的「9 份互不相同」→「均对齐权威表」）。**新增纪律⑦**（`side_effect_unknown` 与 `status` 一致）。**invalid 从 6 条增至 9 条**（新增 `step_not_array` / `reservation_bad_state` / `tier_privilege_escalation`）；**valid 从 9 条增至 11 条**（新增 `run_multi_step` / `step_float_args`） |
 | v0.4.0 (TASK-040) | 2026-11-07 | **契约升 v0.4.0**（语义层：让「篡改任一状态转移 ⇒ 同时破坏哈希链与转移表校验」成为机器可验证的性质）。① **权威转移表补边**：`created→waiting_approval`、`paused→failed`、`degraded→waiting_approval`、`degraded→outcome_unknown`、`outcome_unknown→cancelled`；**删边**：`outcome_unknown→running`（⚠️ **安全洞**：未经对账不得重入执行态）—— 该边在 `status-transitions.json` 的 `forbidden` 段被**显式黑名单**，校验器读到即判红；② 审计 `audit_entry.type` 由自由字符串改为**枚举**（12 值，**只增不删**），新增 `"state_transition"`；③ 新增 `$defs/state_transition_payload`（`{from,to,actor,cause,evidence_ref?}`，`actor` ∈ `control_plane/executor/human/policy`），用 `if/then` 约束「`type=="state_transition"` ⇒ payload 必须是该形状」；④ **新增 `--replay` 判据（纪律⑧，进 `--all`）**：重放状态转移序列，五条判据（首条 `from==created` / 链式连续 / 边在权威表内 / 离开 `outcome_unknown` 必带 `evidence_ref` / 状态名合法），任一不满足 ⇒ exit 2 + RFC 6901 路径；⑤ **§2.2.1 写死**「顶层 `patternProperties` + `additionalProperties:false` 的多余字段路径 = **父路径**」（Python/Java 共同口径，防止再分叉）；⑥ README 补「**终态 vs 准静态态**」区分（`outcome_unknown` 有出边但必须外部证据）；⑦ 版本四处统一 `0.4.0`（`spec.version` 集合加 `"0.4.0"`、`title`、`$id` 版本段）。**invalid 从 9 条增至 12 条**（新增 `invalid_illegal_edge` / `invalid_unknown_no_evidence` / `invalid_replay_gap`）；**valid 从 11 条增至 14 条**（新增 `step_replay` / `run_unknown_resolved`） |
+| v0.5.0 (TASK-050) | 2026-11-08 | **契约升 v0.5.0**（外审建议：工具能力档要有**标准出处**、审计结果要**可复现**）。① **新增 `$defs/tool_annotations`**：`tools[].annotations` **四键必填**（`readOnlyHint/destructiveHint/idempotentHint/openWorldHint`），标 `x-source: MCP ToolAnnotations (spec 2025-03-26+)`；② **新增纪律⑨**（§3.8）：`annotations` 与 `tier`/`side_effect` 的映射规则**写死**（`tier = destructive if destructiveHint else (read if readOnlyHint else write)`；`side_effect = none if readOnlyHint else (idempotent if idempotentHint else non_idempotent)`），不一致 ⇒ 拒绝路径 `/run/tools/<i>/annotations`（**不是** `/run/tools/<i>/tier`：事实来源是注解）；`openWorldHint` **不入推导链**（它是 `outcome_unknown` 的预测变量）；③ **`audit_payload.result`（自由字符串）删除**，改 `result_digest`（`^[0-9a-f]{64}$`，§3.9）—— 自由文本参与哈希 ⇒ 同一结果换个措辞哈希就变、不可复现；摘要口径 = **与 `args_digest` 同一套 canonical**（复用实现，不另写一套）；哈希公式与 `--verify-chain`/`--replay` 逻辑**不变**，但存量 fixture 的 `hash` 须**按新载荷重算**；④ 版本四处统一 `0.5.0`。**invalid 从 12 条增至 14 条**（新增 `invalid_tool_annotations_mismatch`（期望路径 `/run/tools/0/annotations`）/ `invalid_result_digest_format`（期望路径 `/run/audit/0/payload/result_digest`））；**valid 仍 14 条**（全部补 `annotations`；`run_outcome_unknown` 加 `result_digest`） |

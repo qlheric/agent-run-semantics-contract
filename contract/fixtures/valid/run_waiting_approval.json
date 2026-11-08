@@ -1,7 +1,7 @@
 {
   "$comment": "waiting_approval 状态样例：等待人工审批，approval.status=pending 且 required=true",
   "spec": {
-    "version": "0.4.0",
+    "version": "0.5.0",
     "clock": "wall",
     "framework": "langgraph"
   },
@@ -38,6 +38,12 @@
       {
         "tool": "search",
         "tier": "read",
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": false,
+            "openWorldHint": true
+          },
         "args_schema": {
           "type": "object"
         },

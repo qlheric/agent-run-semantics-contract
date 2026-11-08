@@ -1,7 +1,7 @@
 {
   "$comment": "负样本①：run 缺必填字段 policy（拒绝路径 /run/policy）",
   "spec": {
-    "version": "0.4.0",
+    "version": "0.5.0",
     "clock": "wall",
     "framework": "langgraph"
   },

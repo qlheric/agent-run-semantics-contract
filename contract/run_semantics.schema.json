@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://qlheric.github.io/agent-run-semantics-contract/v0.4.0/run_semantics.schema.json",
-  "title": "Agent Run 语义契约 v0.4.0",
-  "description": "M1 Agent Run 控制面语义契约 v0.4.0（单一真源）。本文只定形状，不定实现。",
+  "$id": "https://qlheric.github.io/agent-run-semantics-contract/v0.5.0/run_semantics.schema.json",
+  "title": "Agent Run 语义契约 v0.5.0",
+  "description": "M1 Agent Run 控制面语义契约 v0.5.0（单一真源）。本文只定形状，不定实现。",
   "type": "object",
   "additionalProperties": false,
   "patternProperties": {
@@ -39,7 +39,7 @@
       "properties": {
         "version": {
           "type": "string",
-          "enum": ["0.2.0", "0.3.0", "0.4.0"],
+          "enum": ["0.2.0", "0.3.0", "0.4.0", "0.5.0"],
           "description": "契约版本；版本变了还是同一契约（ID 永不重命名）。v0.3 起改为**版本集合**（不再 const），新增版本只改这一处"
         },
         "clock": {
@@ -415,7 +415,11 @@
       "properties": {
         "tool": { "type": "string" },
         "args_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-        "result": { "type": "string" },
+        "result_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "**v0.5 替代 v0.4 的 `result`（自由字符串）**：结果内容的 sha256 摘要（canonical bytes 的小写 hex）。自由文本参与哈希 ⇒ 同一份结果在不同措辞下哈希不同、不可复现 ⇒ 改存 digest，原文走 `extra` 逃生舱"
+        },
         "reason": { "type": "string" },
         "amount_usd": { "type": "integer", "minimum": 0 },
         "from": {
@@ -514,12 +518,13 @@
       "required": [
         "tool",
         "tier",
+        "annotations",
         "args_schema",
         "side_effect",
         "dedupe_key_template",
         "result_budget_bytes"
       ],
-      "description": "工具目录条目（字段 10）：按权限档过滤后才下发",
+      "description": "工具目录条目（字段 10）：按权限档过滤后才下发。**v0.5：`annotations` 必填**（MCP ToolAnnotations 折叠，见 $defs/tool_annotations）",
       "properties": {
         "tool": { "type": "string", "minLength": 1 },
         "tier": {
@@ -527,6 +532,7 @@
           "enum": ["read", "write", "destructive"],
           "description": "权限档（语义 5）"
         },
+        "annotations": { "$ref": "#/$defs/tool_annotations" },
         "args_schema": { "$ref": "#/$defs/args_schema" },
         "side_effect": { "$ref": "#/$defs/side_effect" },
         "dedupe_key_template": {
@@ -534,6 +540,31 @@
           "description": "工具级去重键模板（改名自 idempotency_key_template；幂等收敛 4→2 后只剩这一个模板）"
         },
         "result_budget_bytes": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "tool_annotations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"],
+      "x-source": "MCP ToolAnnotations (spec 2025-03-26+)",
+      "description": "**v0.5 新增**：工具能力注解，折叠自 MCP 的 ToolAnnotations（四个 hint 全部必填，不许省略 —— 省略即「不知道」，而消费方必须能区分「无副作用」与「不知道有没有副作用」）。**与 tier/side_effect 的映射规则写死**（CONFORMANCE §3.8）：annotations 与 tier/side_effect 不一致 ⇒ 判红（路径 `/run/tools/<i>/annotations`）",
+      "properties": {
+        "readOnlyHint": {
+          "type": "boolean",
+          "description": "工具只读、不改变环境（MCP readOnlyHint）。`true` ⇒ tier 必须是 read、side_effect 必须是 none"
+        },
+        "destructiveHint": {
+          "type": "boolean",
+          "description": "工具可能破坏性修改（MCP destructiveHint，**缺省 true**，但本契约要求显式写明）。`true` ⇒ tier 必须是 destructive"
+        },
+        "idempotentHint": {
+          "type": "boolean",
+          "description": "重复调用无额外副作用（MCP idempotentHint）。readOnlyHint=false 时：true ⇒ side_effect=idempotent，false ⇒ side_effect=non_idempotent"
+        },
+        "openWorldHint": {
+          "type": "boolean",
+          "description": "工具与开放世界交互、结果可能受外部影响（MCP openWorldHint）。**保留为 `outcome_unknown` 的预测变量**：openWorldHint=true 的工具，其非幂等调用失败时更可能落到 outcome_unknown"
+        }
       }
     },
     "args_schema": {

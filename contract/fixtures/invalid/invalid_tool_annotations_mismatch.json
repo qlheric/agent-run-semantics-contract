@@ -1,0 +1,168 @@
+{
+  "$comment": "v0.5 负例：工具 annotations 与 tier/side_effect 不一致（annotations 声明只读，但 tier=read / side_effect=none 的条目被标成 destructiveHint=true）⇒ 期望拒绝路径 /run/tools/0/annotations",
+  "spec": {
+    "version": "0.5.0",
+    "clock": "wall",
+    "framework": "agent_framework"
+  },
+  "run": {
+    "run_id": "run_created_003",
+    "status": "created",
+    "clock": "wall",
+    "idempotency_key": "idem-run-created-003",
+    "policy": {
+      "capability_tier": "write",
+      "max_attempts": 2,
+      "retry_profile": {
+        "name": "read_only",
+        "max_attempts": 2,
+        "backoff_ms": 100,
+        "retryable_tools": [
+          "search",
+          "read_file",
+          "list_dir"
+        ]
+      }
+    },
+    "budget": {
+      "max_steps": 8,
+      "max_tool_calls": 16,
+      "max_tokens": 40000,
+      "max_cost_usd": 2000000,
+      "currency": "USD",
+      "price_snapshot_id": "price-2026-11-01"
+    },
+    "termination": {
+      "reason": "completed"
+    },
+    "error": null,
+    "side_effect_unknown": false,
+    "audit": [],
+    "tools": [
+      {
+        "tool": "list_dir",
+        "tier": "read",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "args_schema": {
+          "type": "object",
+          "required": [
+            "path"
+          ]
+        },
+        "side_effect": "none",
+        "dedupe_key_template": "run/{run_id}/step/{step_id}/list_dir",
+        "result_budget_bytes": 4096
+      },
+      {
+        "tool": "write_file",
+        "tier": "write",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "args_schema": {
+          "type": "object",
+          "required": [
+            "path",
+            "content"
+          ]
+        },
+        "side_effect": "idempotent",
+        "dedupe_key_template": "run/{run_id}/step/{step_id}/write_file",
+        "result_budget_bytes": 65536
+      }
+    ],
+    "reservations": []
+  },
+  "step": [
+    {
+      "step_id": "step_0",
+      "attempt": 1,
+      "side_effect": "idempotent",
+      "dedupe_scope": "run_created_003/step_0/write_file",
+      "effective_tier": "write",
+      "approval": {
+        "required": true,
+        "status": "rejected",
+        "by": "operator-a",
+        "at": "2026-11-02T10:05:00Z",
+        "expires_at": "2026-11-02T10:35:00Z"
+      },
+      "args": {
+        "path": "reports/summary.md",
+        "content": "写入内容"
+      },
+      "granted": {
+        "deadline_at_ms": 1793594400000,
+        "deadline_ms": 20000,
+        "clock": "wall",
+        "scope": "run_created_003/step_0/write_file",
+        "quota": {
+          "cost_usd": 50000,
+          "tool_calls": 2,
+          "tokens": 10000
+        }
+      },
+      "grant_request": {
+        "run_id": "run_created_003",
+        "step_id": "step_0",
+        "attempt": 1,
+        "dedupe_scope": "run_created_003/step_0/write_file",
+        "tool": "write_file",
+        "args": {
+          "path": "reports/summary.md",
+          "content": "写入内容"
+        }
+      }
+    }
+  ],
+  "x-status-transitions": {
+    "created": [
+      "cancelled",
+      "running",
+      "waiting_approval"
+    ],
+    "running": [
+      "cancelled",
+      "degraded",
+      "failed",
+      "outcome_unknown",
+      "paused",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "waiting_approval": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "paused": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "degraded": [
+      "cancelled",
+      "failed",
+      "outcome_unknown",
+      "running",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "succeeded": [],
+    "failed": [],
+    "cancelled": [],
+    "outcome_unknown": [
+      "cancelled",
+      "failed",
+      "succeeded"
+    ]
+  }
+}

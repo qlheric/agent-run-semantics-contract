@@ -1,7 +1,7 @@
 {
   "$comment": "cancelled 状态样例：调用方取消，termination.reason=cancelled_by_caller",
   "spec": {
-    "version": "0.4.0",
+    "version": "0.5.0",
     "clock": "monotonic",
     "framework": "custom"
   },
@@ -39,6 +39,12 @@
       {
         "tool": "search",
         "tier": "read",
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": false,
+            "openWorldHint": true
+          },
         "args_schema": {
           "type": "object"
         },

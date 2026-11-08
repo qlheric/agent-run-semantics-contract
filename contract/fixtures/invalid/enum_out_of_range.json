@@ -1,7 +1,7 @@
 {
   "$comment": "负样本②：run.status 枚举越界（拒绝路径 /run/status）",
   "spec": {
-    "version": "0.4.0",
+    "version": "0.5.0",
     "clock": "wall",
     "framework": "langgraph"
   },

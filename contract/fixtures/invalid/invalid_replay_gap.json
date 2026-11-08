@@ -1,7 +1,7 @@
 {
   "$comment": "负例：state_transition 链式断裂（第 2 条 from=degraded，上一条 to=running）⇒ --replay 判红，路径 /run/audit/1/payload/from",
   "spec": {
-    "version": "0.4.0",
+    "version": "0.5.0",
     "clock": "wall",
     "framework": "langgraph"
   },
@@ -73,6 +73,12 @@
       {
         "tool": "search",
         "tier": "read",
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": false,
+            "openWorldHint": true
+          },
         "args_schema": {
           "type": "object",
           "required": [

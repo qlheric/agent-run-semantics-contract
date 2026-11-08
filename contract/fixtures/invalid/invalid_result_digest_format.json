@@ -1,0 +1,170 @@
+{
+  "$comment": "v0.5 负例：audit 载荷的 result_digest 不是 64 位小写 hex（长度不足）⇒ 期望拒绝路径 /run/audit/0/payload/result_digest",
+  "spec": {
+    "version": "0.5.0",
+    "clock": "wall",
+    "framework": "langgraph"
+  },
+  "run": {
+    "run_id": "run_outcome_unknown_009",
+    "status": "outcome_unknown",
+    "clock": "wall",
+    "idempotency_key": "idem-run-outcome-unknown-009",
+    "policy": {
+      "capability_tier": "destructive",
+      "max_attempts": 1,
+      "retry_profile": {
+        "name": "read_only",
+        "max_attempts": 1,
+        "backoff_ms": 0,
+        "retryable_tools": [
+          "read_file"
+        ]
+      }
+    },
+    "budget": {
+      "max_steps": 8,
+      "max_tool_calls": 16,
+      "max_tokens": 30000,
+      "max_cost_usd": 1500000,
+      "currency": "USD",
+      "price_snapshot_id": "price-2026-11-01",
+      "used_steps": 2,
+      "used_tool_calls": 5,
+      "used_tokens": 9000,
+      "used_cost_usd": 60000
+    },
+    "termination": {
+      "reason": "tool_error",
+      "detail": "非幂等副作用失败：副作用状态未知，等待人工核对"
+    },
+    "error": {
+      "code": "tool_failed",
+      "message": "写外部系统时连接中断，副作用是否落库未知"
+    },
+    "side_effect_unknown": true,
+    "audit": [
+      {
+        "seq": 0,
+        "ts_ms": 1793617200000,
+        "type": "step_outcome_unknown",
+        "run_id": "run_outcome_unknown_009",
+        "step_id": "step_0",
+        "attempt": 1,
+        "payload": {
+          "tool": "charge_card",
+          "args_digest": "b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1",
+          "reason": "side_effect_unknown",
+          "result_digest": "7bd381e0"
+        },
+        "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "hash": "93c963921dca1f7d48fb0ee90e6f265fc827fb0e6ffefb6d1579a76c8fa53109"
+      }
+    ],
+    "tools": [
+      {
+        "tool": "charge_card",
+        "tier": "destructive",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "args_schema": {
+          "type": "object",
+          "required": [
+            "order_id"
+          ]
+        },
+        "side_effect": "non_idempotent",
+        "dedupe_key_template": "run/{run_id}/step/{step_id}/charge_card",
+        "result_budget_bytes": 1024
+      }
+    ],
+    "reservations": []
+  },
+  "step": [
+    {
+      "step_id": "step_0",
+      "attempt": 1,
+      "side_effect": "non_idempotent",
+      "dedupe_scope": "run_outcome_unknown_009/step_0/charge_card",
+      "effective_tier": "destructive",
+      "approval": {
+        "required": true,
+        "status": "approved",
+        "by": "operator-c",
+        "at": "2026-11-02T10:59:00Z"
+      },
+      "args": {
+        "order_id": "ORD-2026-0002",
+        "amount_usd": 2599
+      },
+      "granted": {
+        "deadline_at_ms": 1793594400000,
+        "deadline_ms": 6000,
+        "clock": "wall",
+        "scope": "run_outcome_unknown_009/step_0/charge_card",
+        "quota": {
+          "cost_usd": 100000,
+          "tool_calls": 1,
+          "tokens": 0
+        }
+      },
+      "grant_request": {
+        "run_id": "run_outcome_unknown_009",
+        "step_id": "step_0",
+        "attempt": 1,
+        "dedupe_scope": "run_outcome_unknown_009/step_0/charge_card",
+        "tool": "charge_card",
+        "args": {
+          "order_id": "ORD-2026-0002",
+          "amount_usd": 2599
+        }
+      }
+    }
+  ],
+  "x-status-transitions": {
+    "created": [
+      "cancelled",
+      "running",
+      "waiting_approval"
+    ],
+    "running": [
+      "cancelled",
+      "degraded",
+      "failed",
+      "outcome_unknown",
+      "paused",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "waiting_approval": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "paused": [
+      "cancelled",
+      "failed",
+      "running"
+    ],
+    "degraded": [
+      "cancelled",
+      "failed",
+      "outcome_unknown",
+      "running",
+      "succeeded",
+      "waiting_approval"
+    ],
+    "succeeded": [],
+    "failed": [],
+    "cancelled": [],
+    "outcome_unknown": [
+      "cancelled",
+      "failed",
+      "succeeded"
+    ]
+  }
+}

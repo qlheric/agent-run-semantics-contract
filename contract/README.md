@@ -1,9 +1,9 @@
-# Agent Run 语义契约 v0.4.0
+# Agent Run 语义契约 v0.5.0
 
 > **本文只定形状、不定实现。**
 > 单一真源 = `contract/run_semantics.schema.json`。Java 与 Python 两边各按它实现/校验，**不各写一套**；
 > 双端一致性由 `contract/fixtures/` + 同一组 `contract_check` 命令**逐字节比对**证明（协议见 `CONFORMANCE.md`）。
-> 版本 `0.4.0`；契约 ID 永不重命名，版本变了还是同一契约。
+> 版本 `0.5.0`；契约 ID 永不重命名，版本变了还是同一契约。
 >
 > **本 schema 描述的是「run 快照文档」**（`termination` / `error` / `audit` / `tools` 都是快照字段），
 > **不是 HTTP 请求体**；请求体形状在 TASK-001 另定。
@@ -31,6 +31,10 @@
 5. **状态转移必须留痕**（v0.4）：每一次状态推进都要在审计里写一条
    `type="state_transition"` 的条目（`from`/`to`/`actor`/`cause`）——
    否则 `--replay` 重不出序列，「篡改转移 ⇒ 必被检出」这条性质就不成立。
+6. **工具注解必须自洽**（v0.5）：`tools[].annotations`（MCP ToolAnnotations 四键必填）
+   与 `tier`/`side_effect` 必须按 §2.4 的映射规则一致 —— 不一致即判红；
+7. **审计结果不写自由文本**（v0.5）：`payload.result`（自由字符串）已删，
+   改 `payload.result_digest`（64 位小写 hex）—— 自由文本参与哈希 ⇒ 不可复现。
 
 > **纪律① 的唯一例外**：`$defs/json_value` 与 `$defs/extensions` 里标了 `x-free-form` 的
 > object 分支（args 载荷容器、逃生舱）用 `additionalProperties: {$ref: json_value}` 而不是 `false` ——
@@ -77,6 +81,14 @@ M1 控制面启动时读本文件并用 `run.status` 枚举自检；契约修订
 > ③ 新增 **`--replay`** 判据（进 `--all`）：重放状态转移序列，链式连续 + 边合法 +
 > 离开 `outcome_unknown` 必须带 `evidence_ref`；
 > ④ `audit_entry.type` 由自由字符串改为**枚举**（**只增不删**）。
+>
+> **v0.5 增量**（相对 v0.4）：
+> ① `tools[].annotations` **必填**（MCP ToolAnnotations 折叠，四键）——
+> 工具能力档有了**标准出处**；与 `tier`/`side_effect` 的映射规则**写死**，
+> 不一致 ⇒ 判红（路径 `/run/tools/<i>/annotations`）；`openWorldHint` 保留为
+> `outcome_unknown` 的**预测变量**；
+> ② `audit_payload.result`（自由字符串）**删除**，改 `result_digest`
+> （canonical bytes 的 sha256）—— 审计结果**可复现**。
 
 ## 1. 必进字段（**数量自动导出，勿写死**）
 
@@ -91,7 +103,7 @@ M1 控制面启动时读本文件并用 `run.status` 枚举自检；契约修订
 
 | # | 字段 | 类型 | 必填 | 一句话语义 | 版本 |
 |---|---|---|---|---|---|
-| 1 | `spec.version` | string（**版本集合** `["0.2.0","0.3.0","0.4.0"]`，不再 `const`） | 是 | 契约版本，与字段演进解耦。新增版本只改 schema 这一处 | v0.3 |
+| 1 | `spec.version` | string（**版本集合** `["0.2.0","0.3.0","0.4.0","0.5.0"]`，不再 `const`） | 是 | 契约版本，与字段演进解耦。新增版本只改 schema 这一处 | v0.3 |
 | 2 | `run.status` + 根级 `x-status-transitions` | string 枚举(9) + object | status 是；`x-status-transitions` **否** | run 状态机与合法转移表（转移表是**契约级元数据**，挂在文档根，不塞进每份 run 快照）；`outcome_unknown` = 副作用可能已发生。**转移表可省略**，唯一权威是 `status-transitions.json` | v0.3 |
 | 3 | `step[].attempt` / `run.policy.max_attempts` | integer | 是 | 第几次尝试 / 重试上限 | v0.1 |
 | 4 | `step[].granted.deadline_at_ms` / `deadline_ms` / `clock` | integer / integer / enum | 是 | 绝对墙钟截止 + 本 step 时长上限 + 时钟约定（`wall`/`monotonic`） | v0.1 |
@@ -100,7 +112,7 @@ M1 控制面启动时读本文件并用 `run.status` 枚举自检；契约修订
 | 7 | `step[].granted.quota` + `run.budget.used_*` | integer | 否（授予时必给） | `sum(used) + granted ≤ quota` 由控制面在同一原子操作内判定；执行面只有额度，不是所有权 | v0.1 |
 | 8 | `run.termination.reason` + `run.error` | enum / **object \| null** | 是（`error` 可为 null） | 终止原因 / 错误详情。**v0.3：`error` 可空，去掉 `code:"none"` 哨兵** | v0.3 |
 | 9 | `run.audit[]` | array\<object\> | 是（可为空数组） | 审计条目 `{seq, **ts_ms**, type, run_id, step_id, attempt, payload, prev_hash, hash}`，append-only 哈希链。**v0.3：时间戳改 `ts_ms`（epoch 毫秒整数），参与哈希** | v0.3 |
-| 10 | `run.tools[]` | array\<object\> | 是（可为空数组） | 工具目录条目 `{tool, tier, args_schema, side_effect, **dedupe_key_template**, result_budget_bytes}`，按档过滤后才下发。**v0.3：`idempotency_key_template` 改名** | v0.3 |
+| 10 | `run.tools[]` | array\<object\> | 是（可为空数组） | 工具目录条目 `{tool, tier, **annotations**, args_schema, side_effect, **dedupe_key_template**, result_budget_bytes}`，按档过滤后才下发。**v0.3：`idempotency_key_template` 改名；v0.5：加 `annotations`（MCP ToolAnnotations 折叠，四键必填）** | v0.3 |
 | 11 | `step[].approval.status` | enum(4) | 是 | 审批状态 `pending/approved/rejected/expired` | v0.1 |
 | 12 | `step[].args` / `step[].args_ref` | object \| string | 二选一 | 参数本体或大参数引用；`oneOf` 严格二选一（同时给或都不给都非法）。**v0.3：args 允许浮点** | v0.3 |
 | 13 | `step[].side_effect` | enum(3) | 是 | 声明式副作用 `none/idempotent/non_idempotent`，控制面据此决定是否允许重试 | v0.1 |
@@ -113,6 +125,8 @@ M1 控制面启动时读本文件并用 `run.status` 枚举自检；契约修订
 | 20 | `run.side_effect_unknown` | boolean | 是 | **v0.3 新增**：`outcome_unknown` 的**读侧事实**（`status=outcome_unknown` ⇔ `true`，其余状态 ⇔ `false`） | v0.3 |
 | 21 | `step[].effective_tier` | enum(3) | 是 | **v0.3 新增**：本 step 的生效权限档，必须等于 `min(policy.capability_tier, tool.tier)`（顺序 `read<write<destructive`） | v0.3 |
 | 22 | `run.audit[].type` + `payload.from/to/actor/cause` | enum(12) / string | type 是；四字段是（`type="state_transition"` 时） | **v0.4 新增**：`state_transition` 审计条目承载**状态转移留痕** —— `from`/`to` 是转移两端，`actor` 是发起主体（`control_plane/executor/human/policy`），`cause` 是原因；`evidence_ref` 是可选的外部对账证据（**离开 `outcome_unknown` 时必填**） | v0.4 |
+| 23 | `run.tools[].annotations` | object（**四键必填**） | 是 | **v0.5 新增**：折叠 MCP `ToolAnnotations`（`readOnlyHint`/`destructiveHint`/`idempotentHint`/`openWorldHint`）—— 工具能力档的**标准出处**。与 `tier`/`side_effect` 的映射规则写死（CONFORMANCE §3.8），不一致 ⇒ 判红 | v0.5 |
+| 24 | `run.audit[].payload.result_digest` | string（`^[0-9a-f]{64}$`） | 否 | **v0.5 新增**：替代 v0.4 的 `payload.result`（自由字符串）。自由文本参与哈希 ⇒ 同一结果换个措辞哈希就变、不可复现 ⇒ 改存 canonical bytes 的 sha256；原文走 `extra` 逃生舱（不参与哈希） | v0.5 |
 
 ### 1.1 幂等优先级（v0.3 收敛 4→2）
 
@@ -135,7 +149,7 @@ M1 控制面启动时读本文件并用 `run.status` 枚举自检；契约修订
 | `run.parent_run_id` | 降级/重试链的父 run |
 | `run.tenant_quota_ref` | 租户配额引用 |
 | 工具目录分页 | 大目录按页下发 |
-| `step[].result_digest` | 结果摘要摘要值 |
+| `step[].result_digest` | 结果摘要摘要值（⚠️ **与 v0.5 的 `run.audit[].payload.result_digest` 不是同一处**：那一个是**审计载荷**里的，本行是 **step 级**字段，仍未落地） |
 | `run.labels` | 自由标签 |
 | 授权租约 | 见方案 §3.5，M2 落地 |
 
@@ -159,6 +173,7 @@ M1 控制面启动时读本文件并用 `run.status` 枚举自检；契约修订
 | `run.reservations[].state` | `held` `settled` `released` `expired` |
 | `run.audit[].type`（**v0.4 起是枚举**） | `run_created` `run_started` `run_finished` `approval_decision` `audit_gap` `side_effect_unknown` `tool_call` `tool_call_denied` `degraded` `step_started` `step_outcome_unknown` `state_transition` |
 | `run.audit[].payload.actor`（**v0.4，仅 `state_transition`**） | `control_plane` `executor` `human` `policy` |
+| `run.tools[].annotations`（**v0.5**） | `readOnlyHint` `destructiveHint` `idempotentHint` `openWorldHint`（四键**都是 boolean**、**都必填**） |
 
 > **`spec.framework` 不再是枚举**（v0.3）：它是**自由字符串**。框架清单会变，
 > 枚举会把消费方钉死（新增框架即成 breaking change）。只做形状，不做优劣评价。
@@ -235,6 +250,58 @@ M1 控制面启动时读本文件并用 `run.status` 枚举自检；契约修订
 
 > **谁裁决**：**控制面**。执行面只上报状态变化，**不自己写** `state_transition` 条目
 > （审计链是控制面的 append-only 日志）。
+
+### 2.4 工具注解：折叠 MCP ToolAnnotations（v0.5）
+
+v0.4 之前，`tools[].tier` 与 `tools[].side_effect` 是本契约**自造**的字段 ——
+消费方无从判断它们与 MCP 生态里那套注解的对应关系。v0.5 起，`tools[].annotations`
+（MCP `ToolAnnotations`，spec 2025-03-26+）成为**必填**：
+
+```json
+"annotations": {
+  "readOnlyHint": false,
+  "destructiveHint": true,
+  "idempotentHint": false,
+  "openWorldHint": true
+}
+```
+
+**四键必填**（MCP 侧允许缺省，本契约收窄）：省略即「不知道」——
+而消费方**必须**能区分「确定没有副作用」与「不知道有没有副作用」。
+
+**映射规则（写死，校验器强制）**：
+
+```
+tier        = destructive if destructiveHint else (read if readOnlyHint else write)
+side_effect = none if readOnlyHint else (idempotent if idempotentHint else non_idempotent)
+```
+
+不一致 ⇒ 判红，路径 `/run/tools/<i>/annotations`（**不是** `/run/tools/<i>/tier` ——
+事实来源是注解）。
+
+> **`openWorldHint` 不在推导链里**：它是 `outcome_unknown` 的**预测变量**
+> （与开放世界交互的工具，非幂等调用失败时更可能落 `outcome_unknown`），
+> 不是权限/副作用的函数 ⇒ 自由取值。
+
+### 2.5 审计结果用 digest 不用自由文本（v0.5）
+
+v0.4 的 `audit_payload.result` 是**自由字符串**，而它**参与审计哈希** ⇒
+同一份工具结果换个措辞、多个字、标点不同，哈希就变 ⇒
+「同一件事」的哈希对不上、跨实现复算困难。
+
+v0.5 起 `result` **删除**，改 `result_digest`（`^[0-9a-f]{64}$`）：
+
+```
+result_digest = sha256( canonical_json(canonicalize(result_value)).encode("utf-8") ).hexdigest()
+```
+
+**与 `args_digest` 同一套 canonical**（码位序 + NFC + null 键剔除 + ES Number::toString）⇒
+复用现成实现，不另写一套。原文（人可读的 detail）走 `extra` 逃生舱或 run 的其它字段，
+**不参与哈希**。
+
+> 哈希公式与 `--verify-chain` / `--replay` 的判据**都不变** ——
+> 变的只是 payload 里那个字段的值形态。但 payload 变了 ⇒ 哈希变了 ⇒
+> 存量数据的 `hash` 必须**按新公式重算**。
 
 ## 3. `args_digest` 规范化算法
 
@@ -355,7 +422,7 @@ python tools/contract_check.py --digest contract/fixtures/valid/step_float_args.
 ### 4.1 `spec.version` 是**版本集合**（v0.3 起）
 
 v0.1 的 `spec.version` 是 `const "0.1.0"` ⇒ 每加一个版本都要改 const（且旧文档无法再通过校验）。
-v0.3 起改为**版本集合**（当前 `enum: ["0.2.0", "0.3.0", "0.4.0"]`）：
+v0.3 起改为**版本集合**（当前 `enum: ["0.2.0", "0.3.0", "0.4.0", "0.5.0"]`）：
 
 * **新增版本只改这一处**（往 enum 里加一项）；
 * 旧版本文档**仍能通过校验**（老消费方按老语义读）；
@@ -365,6 +432,8 @@ v0.3 起改为**版本集合**（当前 `enum: ["0.2.0", "0.3.0", "0.4.0"]`）�
 > **v0.4**：集合加了 `"0.4.0"`；`$id` 也带上了版本段
 > （`https://qlheric.github.io/agent-run-semantics-contract/v0.4.0/run_semantics.schema.json`）——
 > **契约 ID 永不重命名**（仍是同一个契约，只是版本变了）。
+>
+> **v0.5**：集合加了 `"0.5.0"`；`$id` 版本段同步到 `v0.5.0`。
 
 ## 5. 本契约明确**不做**什么
 

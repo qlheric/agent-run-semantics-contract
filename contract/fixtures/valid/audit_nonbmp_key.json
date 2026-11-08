@@ -1,7 +1,7 @@
 {
   "$comment": "v0.3 非 BMP 键名样例（纪律⑤ 的 JCS 键序 = UTF-16 码元序）：payload 里放一对**会分叉**的键名 —— 非 BMP 字符 U+1D54A（𝕊，UTF-16 是代理对 D835 DD4A）与 BMP 高位字符 U+E000。按码元序 𝕊 在前，按码位序 U+E000 在前 ⇒ 两种实现算出的 hash 不同。本 fixture 的 hash 即「Python 侧已按码元序实现」的证据。",
   "spec": {
-    "version": "0.4.0",
+    "version": "0.5.0",
     "clock": "wall",
     "framework": "langgraph"
   },
@@ -57,6 +57,12 @@
       {
         "tool": "search",
         "tier": "read",
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": false,
+            "openWorldHint": true
+          },
         "args_schema": {
           "type": "object"
         },

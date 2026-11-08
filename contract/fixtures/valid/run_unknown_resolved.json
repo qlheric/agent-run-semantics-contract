@@ -1,7 +1,7 @@
 {
   "$comment": "v0.4 replay 样例：outcome_unknown→succeeded 带 evidence_ref（外部对账证据），离开未知态必须带证据（无证据 ⇒ --replay 判红）",
   "spec": {
-    "version": "0.4.0",
+    "version": "0.5.0",
     "clock": "wall",
     "framework": "langgraph"
   },
@@ -91,6 +91,12 @@
       {
         "tool": "search",
         "tier": "read",
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": false,
+            "openWorldHint": true
+          },
         "args_schema": {
           "type": "object",
           "required": [

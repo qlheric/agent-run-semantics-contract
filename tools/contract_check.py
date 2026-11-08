@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Agent Run 语义契约 v0.4.0 —— Python 侧校验器 / canonical digest 实现。
+"""Agent Run 语义契约 v0.5.0 —— Python 侧校验器 / canonical digest 实现。
 
 用途
 ----
@@ -388,7 +388,7 @@ def check_schema_discipline(schema: dict) -> list:
 # ---------------------------------------------------------------------------
 
 # 契约当前版本（唯一真值；四处必须与它一致）
-CURRENT_SPEC_VERSION = "0.4.0"
+CURRENT_SPEC_VERSION = "0.5.0"
 README_PATH = CONTRACT_DIR / "README.md"
 
 
@@ -884,6 +884,84 @@ def check_side_effect_unknown(doc) -> list:
 
 
 # ---------------------------------------------------------------------------
+# 纪律⑨（v0.5 · 工具注解折叠 MCP ToolAnnotations）
+# ---------------------------------------------------------------------------
+
+# MCP ToolAnnotations 的四个 hint（契约 $defs/tool_annotations；四键必填）
+ANNOTATION_KEYS = ("readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint")
+
+
+def expected_tier_from_annotations(annotations: dict) -> str:
+    """按注解推 tier（映射规则写死，CONFORMANCE §3.8）。
+
+    `tier = destructive if destructiveHint else (read if readOnlyHint else write)`
+    """
+    if annotations.get("destructiveHint"):
+        return "destructive"
+    if annotations.get("readOnlyHint"):
+        return "read"
+    return "write"
+
+
+def expected_side_effect_from_annotations(annotations: dict) -> str:
+    """按注解推 side_effect（映射规则写死，CONFORMANCE §3.8）。
+
+    `side_effect = none if readOnlyHint else (idempotent if idempotentHint else non_idempotent)`
+    """
+    if annotations.get("readOnlyHint"):
+        return "none"
+    if annotations.get("idempotentHint"):
+        return "idempotent"
+    return "non_idempotent"
+
+
+def check_tool_annotations(doc) -> list:
+    """纪律⑨：`tools[].annotations` 与 `tier` / `side_effect` 必须一致。
+
+    映射规则（写死，两端一致）：
+      * `tier = destructive if destructiveHint else (read if readOnlyHint else write)`
+      * `side_effect = none if readOnlyHint else (idempotent if idempotentHint else non_idempotent)`
+
+    不一致 ⇒ 判红，路径 `/run/tools/<i>/annotations`（**不是** `/run/tools/<i>/tier` ——
+    判定的事实来源是注解，tier 只是被推导出来的那一端）。
+
+    形状不对（缺 hint、hint 不是布尔）⇒ **不重复报错**，交给 schema 报错
+    （否则同一处问题报两遍、路径不一致 ⇒ 双端输出分叉）。
+    """
+    problems = []
+    tools = (doc.get("run") or {}).get("tools")
+    if not isinstance(tools, list):
+        return problems  # 形状不对交给 schema 报错
+
+    for index, tool in enumerate(tools):
+        if not isinstance(tool, dict):
+            continue
+        annotations = tool.get("annotations")
+        if not isinstance(annotations, dict):
+            continue  # 形状不对交给 schema 报错
+        if any(not isinstance(annotations.get(key), bool) for key in ANNOTATION_KEYS):
+            continue  # 形状不对交给 schema 报错
+
+        expected_tier = expected_tier_from_annotations(annotations)
+        expected_side_effect = expected_side_effect_from_annotations(annotations)
+        declared_tier = tool.get("tier")
+        declared_side_effect = tool.get("side_effect")
+
+        mismatches = []
+        if declared_tier in TIER_ORDER and declared_tier != expected_tier:
+            mismatches.append(f"tier 应为 {expected_tier}，实际 {declared_tier}")
+        if declared_side_effect in SIDE_EFFECT_VALUES and declared_side_effect != expected_side_effect:
+            mismatches.append(
+                f"side_effect 应为 {expected_side_effect}，实际 {declared_side_effect}")
+        if mismatches:
+            problems.append((
+                f"/run/tools/{index}/annotations",
+                "annotations 与 tier/side_effect 不一致：" + "；".join(mismatches),
+            ))
+    return problems
+
+
+# ---------------------------------------------------------------------------
 # --replay（v0.4 · 语义层重放判据）
 # ---------------------------------------------------------------------------
 
@@ -1048,6 +1126,11 @@ def cmd_all(_args) -> int:
             for pointer, message in replay_errors:
                 out(f"failed {rel(path)} path={pointer} ({message})")
             continue
+        annotation_errors = check_tool_annotations(doc)
+        if annotation_errors:
+            for pointer, message in annotation_errors:
+                out(f"failed {rel(path)} path={pointer} ({message})")
+            continue
         valid_pass += 1
 
     invalid_rejected = 0
@@ -1089,6 +1172,11 @@ def cmd_all(_args) -> int:
         if replay_errors:
             invalid_rejected += 1
             out(f"rejected {rel(path)} path={replay_errors[0][0]}")
+            continue
+        annotation_errors = check_tool_annotations(doc)
+        if annotation_errors:
+            invalid_rejected += 1
+            out(f"rejected {rel(path)} path={annotation_errors[0][0]}")
             continue
         out(f"failed {rel(path)}: 本应被拒却通过了校验")
 

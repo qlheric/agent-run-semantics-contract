@@ -1,7 +1,7 @@
 {
   "$comment": "v0.3 边界样例：args 里带 LLM 浮点参数（temperature=0.7、top_p=0.95）—— v0.3 放开浮点，否则表达不了真实 LLM 参数。digest 对第一个 step 求值",
   "spec": {
-    "version": "0.4.0",
+    "version": "0.5.0",
     "clock": "wall",
     "framework": "langgraph"
   },
@@ -38,6 +38,12 @@
       {
         "tool": "llm_call",
         "tier": "read",
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": false,
+            "openWorldHint": true
+          },
         "args_schema": {
           "type": "object",
           "required": [

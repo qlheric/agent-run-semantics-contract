@@ -1,7 +1,7 @@
 {
   "$comment": "负例：outcome_unknown→succeeded 缺 evidence_ref（无外部对账证据不得离开未知态）⇒ --replay 判红，路径 /run/audit/2/payload/evidence_ref",
   "spec": {
-    "version": "0.4.0",
+    "version": "0.5.0",
     "clock": "wall",
     "framework": "langgraph"
   },
@@ -93,6 +93,12 @@
       {
         "tool": "search",
         "tier": "read",
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": false,
+            "openWorldHint": true
+          },
         "args_schema": {
           "type": "object",
           "required": [

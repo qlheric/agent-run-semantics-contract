@@ -1,7 +1,7 @@
 {
   "$comment": "failed 状态样例：工具报错终止，termination.reason=tool_error，error.code=tool_failed",
   "spec": {
-    "version": "0.4.0",
+    "version": "0.5.0",
     "clock": "wall",
     "framework": "agent_framework"
   },
@@ -48,6 +48,12 @@
       {
         "tool": "search",
         "tier": "read",
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": false,
+            "openWorldHint": true
+          },
         "args_schema": {
           "type": "object"
         },

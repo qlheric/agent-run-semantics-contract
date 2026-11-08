@@ -1,7 +1,7 @@
 {
   "$comment": "created 状态样例：framework=agent_framework、policy.capability_tier=write、retry_profile=read_only、step.side_effect=idempotent、approval=rejected",
   "spec": {
-    "version": "0.4.0",
+    "version": "0.5.0",
     "clock": "wall",
     "framework": "agent_framework"
   },
@@ -42,6 +42,12 @@
       {
         "tool": "list_dir",
         "tier": "read",
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": false,
+            "openWorldHint": true
+          },
         "args_schema": {
           "type": "object",
           "required": [
@@ -55,6 +61,12 @@
       {
         "tool": "write_file",
         "tier": "write",
+          "annotations": {
+            "readOnlyHint": false,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": true
+          },
         "args_schema": {
           "type": "object",
           "required": [

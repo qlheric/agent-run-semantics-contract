@@ -1,7 +1,7 @@
 {
   "$comment": "负例⑦：step 改回**单对象**（v0.3 要求 step 是数组）⇒ 期望拒绝路径 /step",
   "spec": {
-    "version": "0.4.0",
+    "version": "0.5.0",
     "clock": "wall",
     "framework": "langgraph"
   },

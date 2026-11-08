@@ -1,7 +1,7 @@
 {
   "$comment": "基准样例：run 处于 running，四项预算全填满，step 带完整 args（中文参数，用于 digest 逐字节比对）",
   "spec": {
-    "version": "0.4.0",
+    "version": "0.5.0",
     "clock": "wall",
     "framework": "langgraph"
   },
@@ -74,6 +74,12 @@
       {
         "tool": "search",
         "tier": "read",
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": false,
+            "openWorldHint": true
+          },
         "args_schema": {
           "type": "object",
           "required": [
@@ -88,6 +94,12 @@
       {
         "tool": "read_file",
         "tier": "read",
+          "annotations": {
+            "readOnlyHint": true,
+            "destructiveHint": false,
+            "idempotentHint": false,
+            "openWorldHint": true
+          },
         "args_schema": {
           "type": "object",
           "required": [
@@ -101,6 +113,12 @@
       {
         "tool": "write_file",
         "tier": "write",
+          "annotations": {
+            "readOnlyHint": false,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": true
+          },
         "args_schema": {
           "type": "object",
           "required": [
