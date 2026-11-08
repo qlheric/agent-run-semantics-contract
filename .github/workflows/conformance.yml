@@ -32,7 +32,7 @@ jobs:
               exit 1
             fi
           fi
-      - name: Schema + fixtures (valid 14/14, invalid 12/12)
+      - name: Schema + fixtures (valid 14/14, invalid 14/14)
         run: python tools/contract_check.py --all
       - name: Coverage / fields (one-line JSON)
         run: |
@@ -40,5 +40,5 @@ jobs:
           python tools/contract_check.py --fields
       - name: Canonical digest smoke (byte-exact)
         run: python tools/contract_check.py --digest contract/fixtures/valid/step_full.json
-      - name: Golden diff — Python implementation vs Java-generated golden (33 cases)
+      - name: Golden diff — Python implementation vs Java-generated golden (35 cases)
         run: python tools/check_golden.py
